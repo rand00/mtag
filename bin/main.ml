@@ -3,6 +3,13 @@ open Bos
 
 let sp = Printf.sprintf
 
+let log_error fmt =
+  let kpp k fmt =
+    let k fmt = k (Format.flush_str_formatter ()) in
+    Format.kfprintf k Format.str_formatter fmt
+  in
+  kpp (Format.printf "mtag: error: %s\n") fmt
+
 let debug = false
 (* let debug = true *)
 
@@ -51,21 +58,37 @@ let find_root () =
     OS.Dir.contents dir >>= fun files ->
     match files |> List.find_opt is_root with
     (*> goto fail if parent = dir*)
-    | None -> aux @@ Fpath.parent dir
+    | None ->
+      let parent = Fpath.parent dir in
+      if parent = dir then (
+        log_error "Didn't find any `_mtags` directory upwards from CWD. See --help";
+        exit 1
+      ) else (
+        aux parent
+      )
     | Some root -> Ok root
   in
   (OS.Dir.current () >>= aux)
   |> R.failwith_error_msg
 
-let usage = {|
-NAME
+let usage = {|NAME
+  
   mtag - the static filesystem tagger
+
+SYNOPSIS
+  
+  mtag <tags> <paths..>
+  mtag query <query>
+  mtag rm <tags> <paths..>
+  mtag tags_union <paths..>
+  mtag tags_intersection <paths..>
   
 DESCRIPTION
 
   Filesystems are tree-structures, which are extremely limited for querying
   for all the data you have lying around. `mtag` allows you to tag any file
-  within a _static_ filesystem hierarchy (which contains an `_mtags` directory).
+  within a static part of the filesystem hierarchy. Static in this sense means
+  that files are added, but not moved or deleted.
 
   Files can have many tags, which `mtag` lets you query, and which outputs
   each found file on separate lines. This allows for composing CLI applications,
@@ -74,50 +97,51 @@ DESCRIPTION
 
   By default `mtag` searches upwards from the current working directory to find
   an `_mtags` directory, which contains all the tags for files within that
-  directory.
+  directory (as relative symlinks).
+  You have the responsibility to create the `_mtags` directory yourself, as you
+  are the one who knows what part of the filesystem will be kept static. 
+  
   All `mtag` commands optionally supports being given `--root=<root-dir>`
   explicitly as the first argument, which overrides the recursive search for
   the `_mtags` directory.
 
-  Beware that you have the responsibility to create the `_mtags` directory
-  yourself, within the root directory of the files you want to tag. The directory
-  structure could e.g. look as follows:
+  The directory structure could look as follows:
     ~/my_static_data
     |-- _mtags/
     |-- videos/
         |-- 2001_01_01
             |--video0.mp4
             |--video1.mp4
-  .. in this example, to run a `mtag` command, you would either `cd` into a
+
+  .. in this example, to run an `mtag` command, you would either `cd` into a
   directory within `~/my_static_data` or pass `--root=~/my_static_data` to `mtag`.
   E.g.:
-    $ cd ~/my_static_data
-    $ mtag score/5,animal/horse videos/2001_01_01/video0.mp4
-    $ mtag query animal/horse
+    # Initializing the static root
+    $ mkdir ~/my_static_data/_mtags
+    # Ordinary workflow
+    $ cd ~/my_static_data/videos/2001_01_01/
+    $ mtag score/5,animal/whale video0.mp4
+    $ mtag query animal/whale
     > ~/my_static_data/videos/2001_01_01/video0.mp4
-  
+
+  Another useful thing is e.g. to explore the `mtags_` directory with:
+    $ tree -d _mtags | less
+  .. which shows all the tags you have already created.
+
 COMMANDS
 
 mtag <tags> <paths..>
 
-  Tag all the paths given, where 'tags' is of the format:
+  Tag all the paths given, where <tags> is of the format:
     <tag>[,<tag>]*
-  where 'tag' is of the format:
+  where <tag> is of the format:
     [<tag-dir>/]*<tag-dir>
   e.g.:
     $ mtag score/5,color/nice/black file0 file1 file3
 
-  Tags are saved as relative symlinks in the first found '_mtags' directory
-  searched for upwards in the filesystem from the current working directory.
-  This directory can be explored with e.g.
-    $ tree -d _mtags | less
-
-  Beware that the files that you tag should never be moved, i.e. mtag operates
-  on a static filesystem.
-  
 mtag query <query>
   
-  Query for all files that match the query, where 'query' is of the format:
+  Query for all files that match the query, where <query> is of the format:
     <[!]tag0>[,<[!]tag1>]*
   where '!' means 'not'.
 
@@ -128,7 +152,7 @@ mtag query <query>
 mtag rm <tags> <paths..>
 
   Remove all the given tags from the given paths. This means removing the
-  relative symlinks from within the _mtags directory, but not removing their
+  relative symlinks from within the `_mtags` directory, but not removing their
   containing directories.
   
 mtag tags_union <paths..>
@@ -136,7 +160,7 @@ mtag tags_union <paths..>
   Output the tags that all the given paths have in common, i.e. the mathematical
   set union.
 
-  The printed string has the same format as the 'tags' parameter of the other
+  The printed string has the same format as the <tags> parameter of the other
   commands - this can be used to e.g. do (in bash):
     $ mtag query $(mtag tags_union file0 file1)
   
@@ -157,6 +181,12 @@ let print_usage () = print_endline usage
   themselves*)
 let main () =
   let argv = Sys.argv |> Array.to_list |> List.tl in
+  begin match argv with
+    | "--help" :: [] ->
+      print_usage ();
+      exit 0
+    | _ -> ()
+  end;
   let root, argv = match argv with
     | [] -> find_root (), argv
     | arg :: argv' ->
@@ -174,7 +204,9 @@ let main () =
     (* |> CCList.rev *)
     |> CCList.to_string ~sep:"\n" Fpath.to_string
     |> print_endline
-  | "query" :: _ -> failwith "Too many arguments"
+  | "query" :: _ ->
+    log_error "Too many arguments. See --help";
+    exit 1
   | "rm" :: tags_str :: paths ->
     let tags = tags_str |> Mtag.parse_string in
     let paths = paths |> List.map (fun p ->
