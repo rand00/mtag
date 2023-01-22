@@ -1,0 +1,12 @@
+
+(env
+ (default
+  (flags (:standard)))
+ (flambda
+  (flags (:standard
+          ;; > optimizations
+          ;; -O3
+          ;;(-inlining-report)
+          ;; (-unbox-closures)
+          ;; ..
+          ))))
