@@ -42,13 +42,30 @@ let compare_mtime_exn path path' =
   end
   |> R.failwith_error_msg
 
+let find_root () =
+  let is_root file =
+    Fpath.basename file = "_mtags"
+    && Sys.is_directory @@ Fpath.to_string file
+  in
+  let rec aux dir = 
+    OS.Dir.contents dir >>= fun files ->
+    match files |> List.find_opt is_root with
+    | None -> aux @@ Fpath.parent dir
+    | Some root -> Ok root
+  in
+  (OS.Dir.current () >>= aux)
+  |> R.failwith_error_msg
+
+(*spec; new CLI root passing:
+  mtag --root:<dir> query miav
+  export MTAG_ROOT=<dir>; mtag query miav # (hmm too confusing as not explicit dep)
+  cd <dir-within-root>; mtag query miav
+*)
+(*> goto add --help *)
 let main () =
-  (* let config = *)
-  (*   let home_dir_str = OS.Env.var "HOME" |> CCOption.get_exn_or "No $HOME found" in *)
-  (*   N_file.Config.of_file Fpath.(v home_dir_str / ".niseqrc" |> to_string) *)
-  (*   |> R.failwith_error_msg in *)
-  (* let niseq_root = Fpath.v config.niseq_root *)
-  let root = failwith "todo" in
+  let root =
+    failwith "todo"
+  in
   match Sys.argv |> Array.to_list |> List.tl with
   | "query" :: query_str :: [] ->
     let query = query_str |> Mtag.parse_query_string in
