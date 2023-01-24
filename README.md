@@ -62,10 +62,14 @@ $ tree -d _mtags | less
 
 ### `mtag <tags> <paths..>`
 
-Tag all the paths given, where <tags> is of the format:
-  <tag>[,<tag>]*
-where <tag> is of the format:
-  [<tag-dir>/]*<tag-dir>
+Tag all the paths given, where `<tags>` is of the format:
+```
+<tag>[,<tag>]*
+```
+where `<tag>` is of the format:
+```
+[<tag-dir>/]*<tag-dir>
+```
 e.g.:
 ```bash
 $ mtag score/5,color/nice/black file0 file1 file3
@@ -73,13 +77,17 @@ $ mtag score/5,color/nice/black file0 file1 file3
 
 ### `mtag query <query>`
 
-Query for all files that match the query, where <query> is of the format:
-  <[!]tag0>[,<[!]tag1>]*
-where '!' means 'not'.
+Query for all files that match the query, where `<query>` is of the format:
+```
+<[!]tag0>[,<[!]tag1>]*
+```
+where `!` means 'not'.
 
 All files are printed newline separated. The output can be used as argument
 to other CLI applications, e.g. in the `bash` shell:
-  $ my_app $(mtag query mytag,!mytag2)
+```bash
+$ my_app $(mtag query mytag,!mytag2)
+```
 
 ### `mtag rm <tags> <paths..>`
 
@@ -92,9 +100,11 @@ containing directories.
 Output the tags that all the given paths have in common, i.e. the mathematical
 set union.
 
-The printed string has the same format as the <tags> parameter of the other
+The printed string has the same format as the `<tags>` parameter of the other
 commands - this can be used to e.g. do (in bash):
-  $ mtag query $(mtag tags_union file0 file1)
+```bash
+$ mtag query $(mtag tags_union file0 file1)
+```
 
 ### `mtag tags_intersection <paths..>`
 
