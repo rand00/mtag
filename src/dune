@@ -4,7 +4,6 @@
  (public_name mtag)
  (flags (:standard
          (-w -27-33-26-9-21-32)
-         ;; (-rectypes)
          ))
  (libraries
   bos
@@ -17,7 +16,6 @@
   (pps
    ppx_deriving.std
    ;; ppx_deriving_yojson
-   ;; ppx_sqlexpr
    )
   )
  )
