@@ -48,11 +48,13 @@ module Member = struct
 
 end
 
+let tags_dirname = "_mtags"
+
 let to_absolute ~root (`Tag tag_path) =
-  `Tag Fpath.(root // v "tags" // tag_path)
+  `Tag Fpath.(root / tags_dirname // tag_path)
 
 let from_absolute ~root (`Tag tag_path) =
-  let root = Fpath.(root // v "tags") in
+  let root = Fpath.(root / tags_dirname) in
   let tag_path =
     Fpath.(relativize ~root tag_path)
     |> CCOption.get_or ~default:tag_path
@@ -182,6 +184,72 @@ module type Run = sig
   
 end
 
+module Path = struct 
+
+  (*goto 
+    * for safety, work on the following types in procs;
+      * type absolute = [ `Absolute of Fpath.t ]
+      * type t = [ absolute | `Relative of Fpath.t ]
+  *)
+
+  let resolve_and_normalize path =
+    OS.Path.symlink_target path
+    |> CCResult.get_or ~default:path
+    |> Fpath.normalize
+
+  let to_absolute path =
+    let path_str = Fpath.to_string path in
+    let dir, file =
+      if Sys.is_directory path_str then path, None
+      else 
+        let d, f = path |> Fpath.split_base in
+        d, Some f
+    in
+    begin
+      OS.Dir.with_current dir OS.Dir.current () |> R.join
+      >>| fun dir ->
+      let apath = match file with
+        | None -> dir 
+        | Some file -> Fpath.(dir // file)
+      in
+      apath
+    end
+    |> R.failwith_error_msg
+
+  (*goto path should be `Absolute *)
+  let verify ~debug ~root path =
+    begin
+      OS.File.exists path >>= fun p_exists ->
+      OS.Dir.exists path >>| fun p_dir_exists ->
+      let p_exists = p_exists || p_dir_exists in
+      if debug then log "verify path: path exists = %b" p_exists;
+      let p_is_inside_root =
+        Fpath.is_rooted ~root path
+      in
+      if debug then log "verify path: inside root = %b" p_is_inside_root;
+      p_exists && p_is_inside_root
+    end
+    |> R.failwith_error_msg
+
+  (*goto path should be `Absolute *)
+  let relativize_to_root ~root path =
+    match Fpath.relativize ~root path with
+    | Some path -> path
+    | None -> failwith (
+      sp "n_tag: Couldn't relativize '%s' to niseq-root"
+        (Fpath.to_string path)
+    )
+
+  let hash path = 
+    Digestif.(
+      path
+      |> Fpath.to_string
+      |> SHA256.digest_string
+      |> SHA256.to_hex
+    )
+
+end
+
 module Run : Run = struct
 
   (*goto make into common module - reusing this between scripts now as boilerplate*)
@@ -211,72 +279,6 @@ module Run : Run = struct
   end
 
   let run ~debug = Aux.run_exn ~debug 
-
-  module Path = struct 
-
-    (*goto 
-      * for safety, work on the following types in procs;
-        * type absolute = [ `Absolute of Fpath.t ]
-        * type t = [ absolute | `Relative of Fpath.t ]
-    *)
-
-    let resolve_and_normalize path =
-      OS.Path.symlink_target path
-      |> CCResult.get_or ~default:path
-      |> Fpath.normalize
-
-    let to_absolute path =
-      let path_str = Fpath.to_string path in
-      let dir, file =
-        if Sys.is_directory path_str then path, None
-        else 
-          let d, f = path |> Fpath.split_base in
-          d, Some f
-      in
-      begin
-        OS.Dir.with_current dir OS.Dir.current () |> R.join
-        >>| fun dir ->
-        let apath = match file with
-          | None -> dir 
-          | Some file -> Fpath.(dir // file)
-        in
-        apath
-      end
-      |> R.failwith_error_msg
-    
-    (*goto path should be `Absolute *)
-    let verify ~debug ~root path =
-      begin
-        OS.File.exists path >>= fun p_exists ->
-        OS.Dir.exists path >>| fun p_dir_exists ->
-        let p_exists = p_exists || p_dir_exists in
-        if debug then log "verify path: path exists = %b" p_exists;
-        let p_is_inside_root =
-          Fpath.is_rooted ~root path
-        in
-        if debug then log "verify path: inside root = %b" p_is_inside_root;
-        p_exists && p_is_inside_root
-      end
-      |> R.failwith_error_msg
-
-    (*goto path should be `Absolute *)
-    let relativize_to_root ~root path =
-      match Fpath.relativize ~root path with
-      | Some path -> path
-      | None -> failwith (
-        sp "n_tag: Couldn't relativize '%s' to niseq-root"
-          (Fpath.to_string path)
-      )
-
-    let hash path = 
-      Digestif.(
-        path
-        |> Fpath.to_string
-        |> SHA256.digest_string
-        |> SHA256.to_hex
-      )
-
-  end
 
   let tag_path_once ~debug ~root ~path (`Tag tag_path_relative as tag) =
     let (`Tag tag_path) = to_absolute ~root tag in
@@ -422,10 +424,10 @@ module Run : Run = struct
     aux [] root
 
   let tags_of_path ~root path =
-    let tags_root = Fpath.(root / "tags") in
+    let tags_root = Fpath.(root / tags_dirname) in
     let hashed_target =
       path
-      |> Path.to_absolute (*goo*)
+      |> Path.to_absolute 
       |> Path.relativize_to_root ~root
       |> Path.hash
     in
