@@ -2,7 +2,7 @@
 
 *My good friend Valdemar has shown interest in opensourcing this program some 
 time ago - happy birthday (: Historically this application was called `n_tag` and 
-part of the suite of [`niseq` CLI-programs](https://r7p5.earth/), in this 
+is part of the suite of [`niseq`](https://r7p5.earth/) CLI-programs, in this 
 case to manage and query my `niseq`-recordings and source material.*
 
 ## Description
