@@ -51,11 +51,11 @@ let find_root () =
   let rec aux dir = 
     OS.Dir.contents dir >>= fun files ->
     match files |> List.find_opt is_mtags_dir with
-    (*> goto fail if parent = dir*)
     | None ->
       let parent = Fpath.parent dir in
       if parent = dir then (
-        log_error "Didn't find any `_mtags` directory upwards from CWD. See --help";
+        log_error "Didn't find any `_mtags` directory upwards from CWD. See \
+                   --help";
         exit 1
       ) else (
         aux parent
