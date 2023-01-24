@@ -148,42 +148,6 @@ let tags_to_string tags =
   |> CCList.map (fun (`Tag tag_path) -> tag_path)
   |> CCList.to_string ~sep:"," Fpath.to_string
 
-module type Run = sig
-
-  val tag :
-    debug:bool ->
-    root:Fpath.t ->
-    tags:(t list) ->
-    paths:(Fpath.t list) ->
-    unit
-
-  val query :
-    debug:bool ->
-    root:Fpath.t ->
-    query:query ->
-    Member.PathSet.t 
-
-  val rm :
-    debug:bool ->
-    root:Fpath.t ->
-    tags:(t list) ->
-    paths:(Fpath.t list) ->
-    unit
-
-  val tags_intersection :
-    debug:bool ->
-    root:Fpath.t ->
-    paths:(Fpath.t list) ->
-    Set.t 
-
-  val tags_union :
-    debug:bool ->
-    root:Fpath.t ->
-    paths:(Fpath.t list) ->
-    Set.t
-  
-end
-
 module Path = struct 
 
   (*goto 
@@ -248,6 +212,42 @@ module Path = struct
       |> SHA256.to_hex
     )
 
+end
+
+module type Run = sig
+
+  val tag :
+    debug:bool ->
+    root:Fpath.t ->
+    tags:(t list) ->
+    paths:(Fpath.t list) ->
+    unit
+
+  val query :
+    debug:bool ->
+    root:Fpath.t ->
+    query:query ->
+    Member.PathSet.t 
+
+  val rm :
+    debug:bool ->
+    root:Fpath.t ->
+    tags:(t list) ->
+    paths:(Fpath.t list) ->
+    unit
+
+  val tags_intersection :
+    debug:bool ->
+    root:Fpath.t ->
+    paths:(Fpath.t list) ->
+    Set.t 
+
+  val tags_union :
+    debug:bool ->
+    root:Fpath.t ->
+    paths:(Fpath.t list) ->
+    Set.t
+  
 end
 
 module Run : Run = struct
