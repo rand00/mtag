@@ -1,9 +1,9 @@
-# Mtag, the static filesystem tagger / media-tagger
+# `mtag`, the static filesystem tagger / media-tagger
 
-**My good friend Valdemar has shown interest in opensourcing this program some 
+*My good friend Valdemar has shown interest in opensourcing this program some 
 time ago - happy birthday (: Historically this application was called `n_tag` and 
 part of the suite of [`niseq` CLI-programs](https://r7p5.earth/), in this 
-case to manage and query my `niseq`-recordings and source material.**
+case to manage and query my `niseq`-recordings and source material.*
 
 ## Description
 
