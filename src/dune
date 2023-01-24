@@ -1,24 +1,26 @@
 ;; (include_subdirs unqualified)
-(library (name mtag)
-  (flags (:standard
-          (-w -27-33-26-9-21-32)
-          ;; (-rectypes)
-          ))
-  (libraries
-   bos
-   containers
-   rresult
-   fmt
-   digestif
-   )
-  (preprocess
-   (pps
-    ppx_deriving.std
-    ;; ppx_deriving_yojson
-    ;; ppx_sqlexpr
-    )
+(library
+ (name mtag)
+ (public_name mtag)
+ (flags (:standard
+         (-w -27-33-26-9-21-32)
+         ;; (-rectypes)
+         ))
+ (libraries
+  bos
+  containers
+  rresult
+  fmt
+  digestif
+  )
+ (preprocess
+  (pps
+   ppx_deriving.std
+   ;; ppx_deriving_yojson
+   ;; ppx_sqlexpr
    )
   )
+ )
 
 
 
