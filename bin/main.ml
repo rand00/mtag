@@ -13,12 +13,6 @@ let log_error fmt =
 let debug = false
 (* let debug = true *)
 
-(*goto later; extending interface; 
-  * n_tag mv tag1 foo/tag2
-  * n_tag list-unique 
-    * < see code:projects:art:niseq:subtodos:20200713 how to use n tag tagging
-*)
-
 let run_tags_union ~root paths =
   let paths = paths |> List.map (fun p ->
     Fpath.of_string p |> R.failwith_error_msg
@@ -50,13 +44,13 @@ let compare_mtime_exn path path' =
   |> R.failwith_error_msg
 
 let find_root () =
-  let is_root file =
+  let is_mtags_dir file =
     Fpath.basename file = "_mtags"
     && Sys.is_directory @@ Fpath.to_string file
   in
   let rec aux dir = 
     OS.Dir.contents dir >>= fun files ->
-    match files |> List.find_opt is_root with
+    match files |> List.find_opt is_mtags_dir with
     (*> goto fail if parent = dir*)
     | None ->
       let parent = Fpath.parent dir in
@@ -66,7 +60,9 @@ let find_root () =
       ) else (
         aux parent
       )
-    | Some root -> Ok root
+    | Some mtags_dir ->
+      let root = Fpath.parent mtags_dir in
+      Ok root
   in
   (OS.Dir.current () >>= aux)
   |> R.failwith_error_msg
@@ -172,13 +168,12 @@ mtag tags_intersection <paths..>
 
 let print_usage () = print_endline usage
 
-(*spec; new CLI root passing:
-  mtag --root:<dir> query miav
-  export MTAG_ROOT=<dir>; mtag query miav # (hmm too confusing as not explicit dep)
-  cd <dir-within-root>; mtag query miav
+(*goto later; extending interface; 
+  * mtag mv tag1 foo/tag2
+  * mtag list-unique 
+    * < see code:projects:art:niseq:subtodos:20200713 how to use n tag tagging
 *)
-(*> goto fail if no root could be found - print how user should create this root-dir
-  themselves*)
+
 let main () =
   let argv = Sys.argv |> Array.to_list |> List.tl in
   begin match argv with
@@ -192,14 +187,15 @@ let main () =
     | arg :: argv' ->
       match CCString.chop_prefix ~pre:"--root=" arg with
       | None -> find_root (), argv
-      | Some root -> Fpath.v root, argv'
+      | Some root ->
+        let root = Fpath.v root |> Mtag.Path.to_absolute in
+        root, argv'
   in
   match argv with
   | "query" :: query_str :: [] ->
     let query = query_str |> Mtag.parse_query_string in
     Mtag.Run.query ~debug ~root ~query
     |> Mtag.Member.PathSet.to_list
-    (*> goto test if this ordering makes sense - went away from it in 'n'*)
     |> CCList.sort compare_mtime_exn
     (* |> CCList.rev *)
     |> CCList.to_string ~sep:"\n" Fpath.to_string
