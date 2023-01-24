@@ -100,7 +100,28 @@ commands - this can be used to e.g. do (in bash):
 
 Works the same as `mtag tags_union` but using mathematical set intersection.
 
+## Installation
 
+[Install](https://opam.ocaml.org/doc/Install.html) `opam`, the OCaml package manager.
+E.g. on Arch Linux:
+```bash
+pacman -S opam
+opam init
+```
+
+Install OCaml 4.14.1:
+```bash
+opam switch install 4.14.1
+```
+
+Then clone this repository and install dependencies and `mtag`:
+```bash
+git clone https://github.com/rand00/mtag
+cd mtag
+opam install rresult bos containers fmt digestif ppx_deriving dune 
+dune build
+cp bin/main.exe ~/bin/mtag
+```
 
 
 
