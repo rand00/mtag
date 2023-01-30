@@ -79,14 +79,17 @@ $ mtag score/5,color/nice/black file0 file1 file3
 
 Query for all files that match the query, where `<query>` is of the format:
 ```
-<[!]tag0>[,<[!]tag1>]*
+<[!][>]tag0>[,<[!][>]tag1>]*
 ```
-where `!` means 'not'.
+where
+  * `!` means 'not'. A not-expression in a query won't do anything if it stands alone
+    (for performance reasons); it only filters other query expressions.
+  * `>` means 'contained within', i.e. including within any sub-tag.
 
 All files are printed newline separated. The output can be used as argument
 to other CLI applications, e.g. in the `bash` shell:
 ```bash
-$ my_app $(mtag query mytag,!mytag2)
+$ my_app $(mtag query mytag,!mytag2,>mytag3,!>mytag4/mytag5)
 ```
 
 ### `mtag rm <tags> <paths..>`

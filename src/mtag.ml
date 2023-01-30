@@ -24,6 +24,7 @@ module T = struct
   
   type expr = [
     | `Not of expr
+    | `Within of expr_const
     | expr_const
   ]
   (*< e.g. syntax: !type/foo,my/bar*)
@@ -67,29 +68,40 @@ let from_absolute ~root (`Tag tag_path) =
 *)
 let rec parse_not str : expr option =
   CCString.chop_prefix ~pre:"!" str
-  |> CCOption.map (fun str -> `Not (parse_expr_exn str))
+  |> CCOption.map (fun str ->
+    `Not (parse_expr str)
+  )
 
-and parse_const_exn str : expr_const =
+and parse_const str : expr_const =
   let fpath =
     Fpath.of_string str
     |> R.failwith_error_msg
   in
   `Const (`Tag fpath)
 
-and parse_expr_exn str : expr =
+and parse_subdir str =
+  CCString.chop_prefix ~pre:">" str
+  |> CCOption.map (fun str ->
+    `Within (parse_const str)
+  )
+
+and parse_expr str : expr =
   parse_not str
   |> CCOption.get_lazy (fun () ->
-    let const = parse_const_exn str in
-    (const : expr_const :> expr)
+    parse_subdir str
+    |> CCOption.get_lazy (fun () ->
+      let v = parse_const str in
+      (v : expr_const :> expr)
+    )
   )
 
 let parse_query_string tag_str : query =
   String.split_on_char ',' tag_str
-  |> List.map parse_expr_exn
+  |> List.map parse_expr
 
 let parse_string tag_str : tag list =
   String.split_on_char ',' tag_str
-  |> List.map parse_const_exn
+  |> List.map parse_const
   |> List.map (fun (`Const tag) -> tag)
 
 (*goto put in common?*)
@@ -106,22 +118,34 @@ let normalize_symlink_target symlink_path =
     in
     Some normalized_target
 
-let members ~root tag =
-  let resolve_only_symlinks symlink_path =
+let members ~root ~recurse tag =
+  let try_resolve_symlink symlink_path =
     match normalize_symlink_target symlink_path with
     | None -> []
     | Some normalized_target ->
       [{ Member.path = normalized_target; symlink_path }]
   in
+  let rec aux tag_path =
+    tag_path
+    |> OS.Dir.contents ~dotfiles:true ~rel:false
+    |> R.failwith_error_msg
+    |> CCList.flat_map (fun content ->
+      if
+        recurse
+        && OS.Path.symlink_target content |> Result.is_error 
+        && Sys.is_directory (Fpath.to_string content)
+      then
+        aux content
+      else
+        try_resolve_symlink content
+    )
+  in
   let (`Tag tag_path) = tag |> to_absolute ~root in
-  tag_path
-  |> OS.Dir.contents ~dotfiles:true ~rel:false
-  |> R.failwith_error_msg
-  |> CCList.flat_map resolve_only_symlinks
+  aux tag_path
 
-let member_paths ~root tag =
+let member_paths ~root ~recurse tag =
   tag
-  |> members ~root 
+  |> members ~root ~recurse
   |> List.map (fun {Member.path; _} -> path)
   |> Member.PathSet.of_list
 
@@ -130,12 +154,19 @@ let rec minimize_expr : expr -> expr = function
   | `Const _ as v -> v
   | `Not (`Not v) -> minimize_expr v
   | `Not v -> `Not (minimize_expr v)
+  | `Within _const as v -> v
 
-let member_paths_expr ~root expr =
+let member_paths_of_expr ~root expr =
   let aux = function
-    | `Const tag -> `Members (member_paths ~root tag)
-    | `Not (`Const tag) -> `Not_members (member_paths ~root tag)
-    | _ -> failwith "Tag: Not-expression was not minimized"
+    | `Const tag ->
+      `Members (member_paths ~root ~recurse:false tag)
+    | `Not (`Const tag) ->
+      `Not_members (member_paths ~root ~recurse:false tag)
+    | `Not (`Within (`Const tag)) ->
+      `Not_members (member_paths ~root ~recurse:true tag)
+    | `Within (`Const tag) ->
+      `Members (member_paths ~root ~recurse:true tag)
+    | `Not (`Not _) -> failwith "Tag: Not-expression was not minimized"
   in
   expr |> minimize_expr |> aux
 
@@ -368,13 +399,13 @@ module Run : Run = struct
   (*exposed*)
   let query ~debug ~root ~query =
     query
-    |> List.map (member_paths_expr ~root) 
+    |> List.map (member_paths_of_expr ~root) 
     |> join_member_exprs
     |> CCOption.get_or ~default:Member.PathSet.empty
 
   let rm_tag_for_path ~debug ~root ~tag ~path =
     tag
-    |> members ~root
+    |> members ~root ~recurse:false
     |> List.iter (fun member -> Member.(
       if member.path = path then begin
         if debug then
