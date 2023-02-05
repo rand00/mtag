@@ -190,6 +190,9 @@ mtag mv <oldtags> <newtags>
 
   Untag all files that have all of <oldtags>, and tag them instead with <newtags>,
   where tags are a comma-separated list of tags.
+
+  Beware; as a list of several <oldtags> is essentially a simple query, this
+  means that files not matching the query will not be moved to <newtags>.
   
 mtag rm <tags> <paths..>
 
