@@ -67,6 +67,10 @@ let find_root () =
   (OS.Dir.current () >>= aux)
   |> R.failwith_error_msg
 
+let paths_from_stdin () =
+  OS.File.(read_lines dash)
+  |> R.failwith_error_msg
+
 let usage = {|NAME
   
   mtag - the static filesystem tagger
@@ -81,15 +85,25 @@ SYNOPSIS
   
 DESCRIPTION
 
-  Filesystems are tree-structures, which are extremely limited for querying
-  for all the data you have lying around. `mtag` allows you to tag any file
-  within a static part of the filesystem hierarchy. Static in this sense means
-  that files are added, but not moved or deleted.
+  Filesystems are tree-structures, which are extremely limited for structuring
+  your data. Also, much data is not textbased, so you can't easily do a
+  filesystem search on these files.
+  Tagging allows a many-to-one relation (many tags to one file), vs the
+  filesystems one-to-one relation. And tagging your files (e.g. videos) is an
+  act of mapping textual data to these files, which allow them to be queried.
 
-  Files can have many tags, which `mtag` lets you query, and which outputs
-  each found file on separate lines. This allows for composing CLI applications,
+  `mtag` tags any file within an immutable part of the filesystem hierarchy,
+  whose base directory contains an `_mtags` directory. Immutable in this sense
+  means that files are added, but not moved or deleted.
+
+  When you query for files matching a set of tags, `mtag` outputs each found
+  file on separate lines. This allows for composing CLI applications,
   e.g. for loading all `mtag`s query-results in your favorite application. E.g.:
     $ mpv $(mtag query type/video,color/green | head -n5)
+
+  Note that the `bash` shell has problems with files containing spaces when
+  expanding the previous `mtag` command (you can set `IFS=$'\n'`).
+  The `fish` shell e.g. doesn't have this problem.
 
   By default `mtag` searches upwards from the current working directory to find
   an `_mtags` directory, which contains all the tags for files within that
@@ -124,6 +138,13 @@ DESCRIPTION
     $ tree -d _mtags | less
   .. which shows all the tags you have already created.
 
+  For composing `mtag` commands, it is advised to use the special `-`
+  path-argument, which represents `stdin`. This circumvents the mentioned shell
+  problems with whitespace, and allows very big sets of paths to be input, as
+  the OS have a limit on the size of the argument-list (see POSIX
+  `getconf ARG_MAX`). This allows you to e.g.:
+    $ mtag query mytag | mtag tags_union -
+  
 COMMANDS
 
 mtag <tags> <paths..>
@@ -148,6 +169,9 @@ mtag query <query>
   All files are printed newline separated. The output can be used as argument
   to other CLI applications, e.g. in the `bash` shell:
     $ my_app $(mtag query mytag,!mytag2,>mytag3,!>mytag4/mytag5)
+
+  .. note the earlier mentioned problems with whitespace in filenames, and the
+  limited argument-list on POSIX systems.
   
 mtag rm <tags> <paths..>
 
@@ -167,12 +191,12 @@ mtag tags_union <paths..>
 mtag tags_intersection <paths..>
 
   Works the same as `mtag tags_union` but using mathematical set intersection.
-  
+
 |}
 
 let print_usage () = print_endline usage
 
-(*goto later; extending interface; 
+(*goto later; extending interface;
   * mtag mv tag1 foo/tag2
   * mtag list-unique 
     * < see code:projects:art:niseq:subtodos:20200713 how to use n tag tagging
@@ -209,18 +233,34 @@ let main () =
     exit 1
   | "rm" :: tags_str :: paths ->
     let tags = tags_str |> Mtag.parse_string in
+    let paths = match paths with
+      | "-" :: [] -> paths_from_stdin ()
+      | v -> v
+    in
     let paths = paths |> List.map (fun p ->
       Fpath.of_string p |> R.failwith_error_msg
     )
     in
     Mtag.Run.rm ~debug ~root ~tags ~paths
   | "tags_intersection" :: paths ->
+    let paths = match paths with
+      | "-" :: [] -> paths_from_stdin ()
+      | v -> v
+    in
     run_tags_intersection ~root paths 
   | "tags_union" :: paths
   | "tags" :: paths -> 
+    let paths = match paths with
+      | "-" :: [] -> paths_from_stdin ()
+      | v -> v
+    in
     run_tags_union ~root paths
   | tags_str :: paths -> 
     let tags = tags_str |> Mtag.parse_string in
+    let paths = match paths with
+      | "-" :: [] -> paths_from_stdin ()
+      | v -> v
+    in
     let paths = paths |> List.map (fun p ->
       Fpath.of_string p |> R.failwith_error_msg
     )

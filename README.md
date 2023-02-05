@@ -7,17 +7,27 @@ case to manage and query my `niseq`-recordings and source material.*
 
 ## Description
 
-Filesystems are tree-structures, which are extremely limited for querying
-for all the data you have lying around. `mtag` allows you to tag any file
-within a static part of the filesystem hierarchy. Static in this sense means
-that files are added, but not moved or deleted.
+Filesystems are tree-structures, which are extremely limited for structuring
+your data. Also, much data is not textbased, so you can't easily do a
+filesystem search on these files.
+Tagging allows a many-to-one relation (many tags to one file), vs the
+filesystems one-to-one relation. And tagging your files (e.g. videos) is an
+act of mapping textual data to these files, which allow them to be queried.
 
-Files can have many tags, which `mtag` lets you query, and which outputs
-each found file on separate lines. This allows for composing CLI applications,
+`mtag` tags any file within an immutable part of the filesystem hierarchy,
+whose base directory contains an `_mtags` directory. Immutable in this sense
+means that files are added, but not moved or deleted.
+
+When you query for files matching a set of tags, `mtag` outputs each found
+file on separate lines. This allows for composing CLI applications,
 e.g. for loading all `mtag`s query-results in your favorite application. E.g.:
 ```bash
 $ mpv $(mtag query type/video,color/green | head -n5)
 ```
+
+Note that the `bash` shell has problems with files containing spaces when
+expanding the previous `mtag` command (you can set `IFS=$'\n'`).
+The `fish` shell e.g. doesn't have this problem.
 
 By default `mtag` searches upwards from the current working directory to find
 an `_mtags` directory, which contains all the tags for files within that
@@ -58,6 +68,13 @@ $ tree -d _mtags | less
 ```
 .. which shows all the tags you have already created.
 
+For composing `mtag` commands, it is advised to use the special `-`
+path-argument, which represents `stdin`. This circumvents the mentioned shell
+problems with whitespace, and allows very big sets of paths to be input, as
+the OS have a limit on the size of the argument-list (see POSIX
+`getconf ARG_MAX`). This allows you to e.g.:
+  $ mtag query mytag | mtag tags_union -
+
 ## Commands
 
 ### `mtag <tags> <paths..>`
@@ -91,6 +108,9 @@ to other CLI applications, e.g. in the `bash` shell:
 ```bash
 $ my_app $(mtag query mytag,!mytag2,>mytag3,!>mytag4/mytag5)
 ```
+
+.. note the earlier mentioned problems with whitespace in filenames, and the
+limited argument-list on POSIX systems.
 
 ### `mtag rm <tags> <paths..>`
 
