@@ -156,6 +156,12 @@ mtag <tags> <paths..>
   e.g.:
     $ mtag score/5,color/nice/black file0 file1 file3
 
+  If the first and single file is `-`, then `mtag` will read a newline separated
+  list of files from stdin instead.
+
+  `--root=<dir>` can be passed to override the search for an `_mtags` dir,
+  starting from the current working directory.
+
 mtag query <query>
   
   Query for all files that match the query, where <query> is of the format:
@@ -178,6 +184,8 @@ mtag rm <tags> <paths..>
   Remove all the given tags from the given paths. This means removing the
   relative symlinks from within the `_mtags` directory, but not removing their
   containing directories.
+
+  See `mtag <tags> <paths..>` for special arguments.
   
 mtag tags_union <paths..>
 
@@ -187,6 +195,8 @@ mtag tags_union <paths..>
   The printed string has the same format as the <tags> parameter of the other
   commands - this can be used to e.g. do (in bash):
     $ mtag query $(mtag tags_union file0 file1)
+  
+  See `mtag <tags> <paths..>` for special arguments.
   
 mtag tags_intersection <paths..>
 
