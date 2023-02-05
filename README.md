@@ -1,4 +1,4 @@
-# `mtag`, the static filesystem tagger / media-tagger
+# `mtag`, the immutable filesystem tagger / media-tagger
 
 *My good friend Valdemar has shown interest in opensourcing this program some 
 time ago - happy birthday (: Historically this application was called `n_tag` and 
@@ -33,7 +33,7 @@ By default `mtag` searches upwards from the current working directory to find
 an `_mtags` directory, which contains all the tags for files within that
 directory (as relative symlinks).
 You have the responsibility to create the `_mtags` directory yourself, as you
-are the one who knows what part of the filesystem will be kept static. 
+are the one who knows what part of the filesystem will be kept immutable. 
 
 All `mtag` commands optionally supports being given `--root=<root-dir>`
 explicitly as the first argument, which overrides the recursive search for
@@ -41,7 +41,7 @@ the immutable root dir containing the `_mtags` directory.
 
 The directory structure could look as follows:
 ```bash
-~/my_static_data
+~/my_immutable_data
 |-- _mtags/
 |-- videos/
     |-- 2001_01_01
@@ -50,16 +50,16 @@ The directory structure could look as follows:
 ```
 
 .. in this example, to run an `mtag` command, you would either `cd` into a
-directory within `~/my_static_data` or pass `--root=~/my_static_data` to `mtag`.
+directory within `~/my_immutable_data` or pass `--root=~/my_immutable_data` to `mtag`.
 E.g.:
 ```bash
-# Initializing the static root
-$ mkdir ~/my_static_data/_mtags
+# Initializing the immutable root
+$ mkdir ~/my_immutable_data/_mtags
 # Ordinary workflow
-$ cd ~/my_static_data/videos/2001_01_01/
+$ cd ~/my_immutable_data/videos/2001_01_01/
 $ mtag score/5,animal/whale video0.mp4
 $ mtag query animal/whale
-> ~/my_static_data/videos/2001_01_01/video0.mp4
+> ~/my_immutable_data/videos/2001_01_01/video0.mp4
 ```
 
 Another useful thing is e.g. to explore the `mtags_` directory with:
