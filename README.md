@@ -18,6 +18,8 @@ act of mapping textual data to these files, which allow them to be queried.
 whose base directory contains an `_mtags` directory. Immutable filesystem in 
 this sense, means that files are added and modified, but not moved or deleted.
 
+### Usage / semantics
+
 When you query for files matching a set of tags, `mtag` outputs each found
 file on separate lines. This allows for composing CLI applications,
 e.g. for loading all `mtag`s query-results in your favorite application. E.g.:
@@ -38,6 +40,17 @@ are the one who knows what part of the filesystem will be kept immutable.
 All `mtag` commands optionally supports being given `--root=<root-dir>`
 explicitly as the first argument, which overrides the recursive search for
 the immutable root dir containing the `_mtags` directory.
+
+For composing `mtag` commands (and other applications), it is advised to use
+the special `-` path-argument, which represents `stdin`.
+This circumvents the mentioned shell problems with whitespace, and allows
+big sets of paths to be input, as the OS have a limit on the size of the
+argument-list (see POSIX `getconf ARG_MAX`). This allows you to e.g.:
+```bash
+$ mtag query mytag | mtag tags_union -
+```
+
+### Examples
 
 The directory structure could look as follows:
 ```bash
@@ -67,13 +80,6 @@ Another useful thing is e.g. to explore the `mtags_` directory with:
 $ tree -d _mtags | less
 ```
 .. which shows all the tags you have already created.
-
-For composing `mtag` commands, it is advised to use the special `-`
-path-argument, which represents `stdin`. This circumvents the mentioned shell
-problems with whitespace, and allows very big sets of paths to be input, as
-the OS have a limit on the size of the argument-list (see POSIX
-`getconf ARG_MAX`). This allows you to e.g.:
-  $ mtag query mytag | mtag tags_union -
 
 ## Commands
 

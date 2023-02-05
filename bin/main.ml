@@ -96,6 +96,8 @@ DESCRIPTION
   whose base directory contains an `_mtags` directory. Immutable filesystem in 
   this sense, means that files are added and modified, but not moved or deleted.
 
+  -- USAGE / SEMANTICS
+  
   When you query for files matching a set of tags, `mtag` outputs each found
   file on separate lines. This allows for composing CLI applications,
   e.g. for loading all `mtag`s query-results in your favorite application. E.g.:
@@ -115,6 +117,15 @@ DESCRIPTION
   explicitly as the first argument, which overrides the recursive search for
   the immutable root dir containing the `_mtags` directory.
 
+  For composing `mtag` commands (and other applications), it is advised to use
+  the special `-` path-argument, which represents `stdin`.
+  This circumvents the mentioned shell problems with whitespace, and allows
+  big sets of paths to be input, as the OS have a limit on the size of the
+  argument-list (see POSIX `getconf ARG_MAX`). This allows you to e.g.:
+    $ mtag query mytag | mtag tags_union -
+  
+  -- EXAMPLES
+  
   The directory structure could look as follows:
     ~/my_immutable_data
     |-- _mtags/
@@ -139,13 +150,6 @@ DESCRIPTION
     $ tree -d _mtags | less
   .. which shows all the tags you have already created.
 
-  For composing `mtag` commands, it is advised to use the special `-`
-  path-argument, which represents `stdin`. This circumvents the mentioned shell
-  problems with whitespace, and allows very big sets of paths to be input, as
-  the OS have a limit on the size of the argument-list (see POSIX
-  `getconf ARG_MAX`). This allows you to e.g.:
-    $ mtag query mytag | mtag tags_union -
-  
 COMMANDS
 
 mtag <tags> <paths..>
