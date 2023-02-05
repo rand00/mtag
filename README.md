@@ -15,8 +15,8 @@ filesystems one-to-one relation. And tagging your files (e.g. videos) is an
 act of mapping textual data to these files, which allow them to be queried.
 
 `mtag` tags any file within an immutable part of the filesystem hierarchy,
-whose base directory contains an `_mtags` directory. Immutable in this sense
-means that files are added, but not moved or deleted.
+whose base directory contains an `_mtags` directory. Immutable filesystem in 
+this sense, means that files are added and modified, but not moved or deleted.
 
 When you query for files matching a set of tags, `mtag` outputs each found
 file on separate lines. This allows for composing CLI applications,
