@@ -179,8 +179,8 @@ mtag query <query>
     `>` means 'contained within', i.e. including within any sub-tag.
 
   All files are printed newline separated. The output can be used as argument
-  to other CLI applications, e.g. in the `bash` shell:
-    $ my_app $(mtag query mytag,!mytag2,>mytag3,!>mytag4/mytag5)
+  to other CLI applications, e.g. in the `fish` shell:
+    $ my_app (mtag query mytag,!mytag2,>mytag3,!>mytag4/mytag5)
 
   .. note the earlier mentioned problems with whitespace in filenames, and the
   limited argument-list on POSIX systems.
