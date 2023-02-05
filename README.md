@@ -47,7 +47,7 @@ This circumvents the mentioned shell problems with whitespace, and allows
 big sets of paths to be input, as the OS have a limit on the size of the
 argument-list (see POSIX `getconf ARG_MAX`). This allows you to e.g.:
 ```bash
-$ mtag query mytag | mtag tags_union -
+$ mtag query mytag | mtag tags-union -
 ```
 
 ### Examples
@@ -133,7 +133,7 @@ containing directories.
 
 See `mtag <tags> <paths..>` for special arguments.
 
-### `mtag tags_union <paths..>`
+### `mtag tags-union <paths..>`
 
 Output the tags that all the given paths have in common, i.e. the mathematical
 set union.
@@ -141,14 +141,14 @@ set union.
 The printed string has the same format as the `<tags>` parameter of the other
 commands - this can be used to e.g. do (in bash):
 ```bash
-$ mtag query $(mtag tags_union file0 file1)
+$ mtag query $(mtag tags-union file0 file1)
 ```
 
 See `mtag <tags> <paths..>` for special arguments.
 
-### `mtag tags_intersection <paths..>`
+### `mtag tags-intersection <paths..>`
 
-Works the same as `mtag tags_union` but using mathematical set intersection.
+Works the same as `mtag tags-union` but using mathematical set intersection.
 
 ## Installation
 

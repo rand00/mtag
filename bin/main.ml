@@ -80,8 +80,8 @@ SYNOPSIS
   mtag <tags> <paths..>
   mtag query <query>
   mtag rm <tags> <paths..>
-  mtag tags_union <paths..>
-  mtag tags_intersection <paths..>
+  mtag tags-union <paths..>
+  mtag tags-intersection <paths..>
   
 DESCRIPTION
 
@@ -122,7 +122,7 @@ DESCRIPTION
   This circumvents the mentioned shell problems with whitespace, and allows
   big sets of paths to be input, as the OS have a limit on the size of the
   argument-list (see POSIX `getconf ARG_MAX`). This allows you to e.g.:
-    $ mtag query mytag | mtag tags_union -
+    $ mtag query mytag | mtag tags-union -
   
   -- EXAMPLES
   
@@ -193,20 +193,20 @@ mtag rm <tags> <paths..>
 
   See `mtag <tags> <paths..>` for special arguments.
   
-mtag tags_union <paths..>
+mtag tags-union <paths..>
 
   Output the tags that all the given paths have in common, i.e. the mathematical
   set union.
 
   The printed string has the same format as the <tags> parameter of the other
   commands - this can be used to e.g. do (in bash):
-    $ mtag query $(mtag tags_union file0 file1)
+    $ mtag query $(mtag tags-union file0 file1)
   
   See `mtag <tags> <paths..>` for special arguments.
   
-mtag tags_intersection <paths..>
+mtag tags-intersection <paths..>
 
-  Works the same as `mtag tags_union` but using mathematical set intersection.
+  Works the same as `mtag tags-union` but using mathematical set intersection.
 
 |}
 
@@ -258,13 +258,13 @@ let main () =
     )
     in
     Mtag.Run.rm ~debug ~root ~tags ~paths
-  | "tags_intersection" :: paths ->
+  | "tags-intersection" :: paths ->
     let paths = match paths with
       | "-" :: [] -> paths_from_stdin ()
       | v -> v
     in
     run_tags_intersection ~root paths 
-  | "tags_union" :: paths
+  | "tags-union" :: paths
   | "tags" :: paths -> 
     let paths = match paths with
       | "-" :: [] -> paths_from_stdin ()
