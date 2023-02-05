@@ -95,8 +95,9 @@ $ mtag score/5,color/nice/black file0 file1 file3
 If the first and single file is `-`, then `mtag` will read a newline separated
 list of files from stdin instead.
 
-`--root=<dir>` can be passed to override the search for an `_mtags` dir,
-starting from the current working directory.
+`--root=<base-dir>` can be passed to override the search for the base
+directory containing an `_mtags` dir, starting from the current working
+directory.
 
 ### `mtag query <query>`
 
