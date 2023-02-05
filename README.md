@@ -37,7 +37,7 @@ are the one who knows what part of the filesystem will be kept static.
 
 All `mtag` commands optionally supports being given `--root=<root-dir>`
 explicitly as the first argument, which overrides the recursive search for
-the `_mtags` directory.
+the immutable root dir containing the `_mtags` directory.
 
 The directory structure could look as follows:
 ```bash
@@ -95,7 +95,7 @@ $ mtag score/5,color/nice/black file0 file1 file3
 If the first and single file is `-`, then `mtag` will read a newline separated
 list of files from stdin instead.
 
-`--root=<base-dir>` can be passed to override the search for the base
+`--root=<root-dir>` can be passed to override the search for the root
 directory containing an `_mtags` dir, starting from the current working
 directory.
 
