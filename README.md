@@ -125,11 +125,16 @@ $ my_app (mtag query mytag,!mytag2,>mytag3,!>mytag4/mytag5)
 .. note the earlier mentioned problems with whitespace in filenames, and the
 limited argument-list on POSIX systems.
 
+### `mtag mv <oldtags> <newtags>`
+
+Untag all files that have all of `<oldtags>`, and tag them instead with `<newtags>`,
+where tags are a comma-separated list of tags.
+  
 ### `mtag rm <tags> <paths..>`
 
 Remove all the given tags from the given paths. This means removing the
 relative symlinks from within the `_mtags` directory, but not removing their
-containing directories.
+containing directories. Tags are a commaseparated list of tags.
 
 See `mtag <tags> <paths..>` for special arguments.
 

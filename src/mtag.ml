@@ -20,12 +20,10 @@ module T = struct
   type t = tag
   [@@deriving ord,eq,show]
 
-  type expr_const = [ `Const of tag ]
-  
   type expr = [
     | `Not of expr
-    | `Within of expr_const
-    | expr_const
+    | `Within of tag
+    | tag
   ]
   (*< e.g. syntax: !type/foo,my/bar*)
   
@@ -63,6 +61,8 @@ let from_absolute ~root (`Tag tag_path) =
   in
   `Tag tag_path
 
+let open_tag v = (v : tag :> [>tag])
+
 (*goto cleanup this parser
   *> should all sub-parsers be in result monad instead?
 *)
@@ -72,17 +72,17 @@ let rec parse_not str : expr option =
     `Not (parse_expr str)
   )
 
-and parse_const str : expr_const =
+and parse_tag str : tag =
   let fpath =
     Fpath.of_string str
     |> R.failwith_error_msg
   in
-  `Const (`Tag fpath)
+  `Tag fpath
 
 and parse_subdir str =
   CCString.chop_prefix ~pre:">" str
   |> CCOption.map (fun str ->
-    `Within (parse_const str)
+    `Within (parse_tag str)
   )
 
 and parse_expr str : expr =
@@ -90,8 +90,8 @@ and parse_expr str : expr =
   |> CCOption.get_lazy (fun () ->
     parse_subdir str
     |> CCOption.get_lazy (fun () ->
-      let v = parse_const str in
-      (v : expr_const :> expr)
+      let v = parse_tag str in
+      (v : tag :> expr)
     )
   )
 
@@ -101,8 +101,7 @@ let parse_query_string tag_str : query =
 
 let parse_string tag_str : tag list =
   String.split_on_char ',' tag_str
-  |> List.map parse_const
-  |> List.map (fun (`Const tag) -> tag)
+  |> List.map parse_tag
 
 (*goto put in common?*)
 let normalize_symlink_target symlink_path =
@@ -151,20 +150,20 @@ let member_paths ~root ~recurse tag =
 
 (*goto make Expr module + put helpers there*)
 let rec minimize_expr : expr -> expr = function
-  | `Const _ as v -> v
+  | `Tag _ as v -> v
   | `Not (`Not v) -> minimize_expr v
   | `Not v -> `Not (minimize_expr v)
   | `Within _const as v -> v
 
 let member_paths_of_expr ~root expr =
   let aux = function
-    | `Const tag ->
+    | `Tag _ as tag ->
       `Members (member_paths ~root ~recurse:false tag)
-    | `Not (`Const tag) ->
+    | `Not (`Tag _ as tag) ->
       `Not_members (member_paths ~root ~recurse:false tag)
-    | `Not (`Within (`Const tag)) ->
+    | `Not (`Within tag) ->
       `Not_members (member_paths ~root ~recurse:true tag)
-    | `Within (`Const tag) ->
+    | `Within tag ->
       `Members (member_paths ~root ~recurse:true tag)
     | `Not (`Not _) -> failwith "Tag: Not-expression was not minimized"
   in

@@ -79,6 +79,7 @@ SYNOPSIS
   
   mtag <tags> <paths..>
   mtag query <query>
+  mtag mv <oldtags> <newtags>
   mtag rm <tags> <paths..>
   mtag tags-union <paths..>
   mtag tags-intersection <paths..>
@@ -184,12 +185,17 @@ mtag query <query>
 
   .. note the earlier mentioned problems with whitespace in filenames, and the
   limited argument-list on POSIX systems.
+
+mtag mv <oldtags> <newtags>
+
+  Untag all files that have all of <oldtags>, and tag them instead with <newtags>,
+  where tags are a comma-separated list of tags.
   
 mtag rm <tags> <paths..>
 
   Remove all the given tags from the given paths. This means removing the
   relative symlinks from within the `_mtags` directory, but not removing their
-  containing directories.
+  containing directories. Tags are a commaseparated list of tags.
 
   See `mtag <tags> <paths..>` for special arguments.
   
@@ -247,6 +253,15 @@ let main () =
   | "query" :: _ ->
     log_error "Too many arguments. See --help";
     exit 1
+  | "mv" :: oldtags :: newtags :: [] ->
+    let oldtags = oldtags |> Mtag.parse_string |> List.map Mtag.open_tag in
+    let newtags = newtags |> Mtag.parse_string in
+    let paths = 
+      Mtag.Run.query ~debug ~root ~query:oldtags
+      |> Mtag.Member.PathSet.to_list
+    in
+    Mtag.Run.tag ~debug ~root ~tags:newtags ~paths;
+    Mtag.Run.rm ~debug ~root ~tags:oldtags ~paths
   | "rm" :: tags_str :: paths ->
     let tags = tags_str |> Mtag.parse_string in
     let paths = match paths with
