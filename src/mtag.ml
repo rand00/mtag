@@ -443,9 +443,15 @@ module Run : Run = struct
       (*< Note: enables removal of the tags of a file that a tag points to
           - do I want this feature? seems unneccesary
             * like for tagging, should only resolve to target, if path is inside
-              .. tags root
+              tags root
       *)
       |> List.map Path.to_absolute
+      (*< goto problem; both resolve_and_normalize + to_absolute makes it impossible
+          to remove tags from path that doesn't exist anymore as they depend
+          the file on filesystem*)
+      (*< goto; rm_tag_for_path.members also call to_absolute..
+          .. why is it needed, and why can't it just be based on Fpath + cwd?
+      *)
     in
     tags |> List.iter (fun tag ->
       rm_tag_for_paths ~dryrun ~root ~tag ~paths)
