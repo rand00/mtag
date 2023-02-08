@@ -69,6 +69,12 @@ let from_absolute ~root (`Tag tag_path) =
   in
   `Tag tag_path
 
+let relative_fpath_of_string str =
+  ("./" ^ str) (*< Note: in case user passes an absolute path*)
+  |> Fpath.of_string
+  |> R.failwith_error_msg
+  |> Fpath.normalize
+
 let open_tag v = (v : tag :> [>tag])
 
 (*goto cleanup this parser
@@ -81,12 +87,7 @@ let rec parse_not str : expr option =
   )
 
 and parse_tag str : tag =
-  let fpath =
-    ("./" ^ str) (*< Note: in case user passes an absolute path*)
-    |> Fpath.of_string
-    |> R.failwith_error_msg
-    |> Fpath.normalize
-  in
+  let fpath = relative_fpath_of_string str in
   `Tag fpath
 
 and parse_subdir str =
@@ -240,7 +241,7 @@ module Path = struct
     match Fpath.relativize ~root path with
     | Some path -> path
     | None -> failwith (
-      sp "n_tag: Couldn't relativize '%s' to niseq-root"
+      sp "mtag: Couldn't relativize '%s' to niseq-root"
         (Fpath.to_string path)
     )
 
@@ -256,37 +257,42 @@ end
 
 module type Run = sig
 
-  val tag :
-    debug:bool ->
+  val tag : 
+    dryrun:bool ->
     root:Fpath.t ->
     tags:(t list) ->
     paths:(Fpath.t list) ->
     unit
 
   val query :
-    debug:bool ->
+    dryrun:bool ->
     root:Fpath.t ->
     query:query ->
     Member.PathSet.t 
 
   val rm :
-    debug:bool ->
+    dryrun:bool ->
     root:Fpath.t ->
     tags:(t list) ->
     paths:(Fpath.t list) ->
     unit
 
   val tags_intersection :
-    debug:bool ->
     root:Fpath.t ->
     paths:(Fpath.t list) ->
     Set.t 
 
   val tags_union :
-    debug:bool ->
     root:Fpath.t ->
     paths:(Fpath.t list) ->
     Set.t
+
+  val replace_paths :
+    dryrun:bool ->
+    root:Fpath.t ->
+    Fpath.t ->
+    Fpath.t ->
+    unit
   
 end
 
@@ -295,8 +301,8 @@ module Run : Run = struct
   (*goto make into common module - reusing this between scripts now as boilerplate*)
   module Aux = struct
 
-    let run_exn cmd ~debug =
-      if debug then begin
+    let run_exn cmd ~dryrun =
+      if dryrun then begin
         Cmd.pp Format.std_formatter cmd;
         Format.print_newline ();
       end
@@ -305,8 +311,8 @@ module Run : Run = struct
         |> OS.Cmd.to_stdout
         |> R.failwith_error_msg
 
-    let run_string_exn cmd ~debug =
-      if debug then begin
+    let run_string_exn cmd ~dryrun =
+      if dryrun then begin
         Cmd.pp Format.std_formatter cmd;
         Format.print_newline ();
         ""
@@ -318,9 +324,9 @@ module Run : Run = struct
 
   end
 
-  let run ~debug = Aux.run_exn ~debug 
+  let run ~dryrun = Aux.run_exn ~dryrun 
 
-  let tag_path_once ~debug ~root ~path (`Tag tag_path_relative as tag) =
+  let tag_path_once ~dryrun ~root ~path (`Tag tag_path_relative as tag) =
     let (`Tag tag_path) = to_absolute ~root tag in
     let tag_path_file =
       let path_hash =
@@ -343,9 +349,9 @@ module Run : Run = struct
       Fpath.(p_jump_back // path)
     in
     begin
-      if debug then begin
-        Printf.printf "DEBUG: tag_path_once: create dir: %s\n" (Fpath.to_string tag_path);
-        Printf.printf "DEBUG: tag_path_once: create symlink: %s -> %s\n"
+      if dryrun then begin
+        Printf.printf "DRYRUN: tag_path_once: create dir: %s\n" (Fpath.to_string tag_path);
+        Printf.printf "DRYRUN: tag_path_once: create symlink: %s -> %s\n"
           (Fpath.to_string tag_path_file)
           (Fpath.to_string path);
         Ok ()
@@ -355,11 +361,11 @@ module Run : Run = struct
     end
     |> R.failwith_error_msg
   
-  let tag_path ~debug ~root ~tags path =
-    tags |> List.iter (tag_path_once ~debug ~root ~path)
+  let tag_path ~dryrun ~root ~tags path =
+    tags |> List.iter (tag_path_once ~dryrun ~root ~path)
 
   (*exposed*)
-  let tag ~debug ~root ~tags ~paths =
+  let tag ~dryrun ~root ~tags ~paths =
     let normalized_paths =
       paths
       |> List.map Path.resolve_and_normalize
@@ -367,13 +373,13 @@ module Run : Run = struct
       (*< goto this should only be resolved if path is inside tags-root*)
       |> List.map Path.to_absolute
     in
-    if not (normalized_paths |> List.for_all (Path.verify ~debug ~root)) then
+    if not (normalized_paths |> List.for_all (Path.verify ~debug:dryrun ~root)) then
       failwith (
-        sp "n_tag: Normalized paths didn't verify: %s" 
+        sp "mtag: Normalized paths didn't verify: %s" 
           (normalized_paths |> List.map Fpath.to_string |> String.concat " "));
     normalized_paths
     |> List.map (Path.relativize_to_root ~root)
-    |> List.iter (tag_path ~debug ~root ~tags)
+    |> List.iter (tag_path ~dryrun ~root ~tags)
 
   let member_set_intersection acc_set set =
     match acc_set with
@@ -406,19 +412,19 @@ module Run : Run = struct
       Some (Member.PathSet.diff members non_members)
   
   (*exposed*)
-  let query ~debug ~root ~query =
+  let query ~dryrun ~root ~query =
     query
     |> List.map (member_paths_of_expr ~root) 
     |> join_member_exprs
     |> CCOption.get_or ~default:Member.PathSet.empty
 
-  let rm_tag_for_path ~debug ~root ~tag ~path =
+  let rm_tag_for_path ~dryrun ~root ~tag ~path =
     tag
     |> members ~root ~recurse:false
     |> List.iter (fun member -> Member.(
       if member.path = path then begin
-        if debug then
-          log "DEBUG: rm_tag_for_path: would delete file: %s"
+        if dryrun then
+          log "DRYRUN: rm_tag_for_path: would delete file: %s"
             (Fpath.to_string member.symlink_path)
         else 
           member.symlink_path
@@ -427,10 +433,10 @@ module Run : Run = struct
       end
     ))
     
-  let rm_tag_for_paths ~debug ~root ~tag ~paths =
-    paths |> List.iter (fun path -> rm_tag_for_path ~debug ~root ~tag ~path)
+  let rm_tag_for_paths ~dryrun ~root ~tag ~paths =
+    paths |> List.iter (fun path -> rm_tag_for_path ~dryrun ~root ~tag ~path)
   
-  let rm ~debug ~root ~tags ~paths =
+  let rm ~dryrun ~root ~tags ~paths =
     let paths =
       paths
       |> List.map Path.resolve_and_normalize
@@ -442,7 +448,7 @@ module Run : Run = struct
       |> List.map Path.to_absolute
     in
     tags |> List.iter (fun tag ->
-      rm_tag_for_paths ~debug ~root ~tag ~paths)
+      rm_tag_for_paths ~dryrun ~root ~tag ~paths)
 
   let dirs_containing ~f ~root =
     let rec aux acc path =
@@ -483,7 +489,7 @@ module Run : Run = struct
     |> R.failwith_error_msg
     |> Set.of_list
 
-  let tags_intersection ~debug ~root ~paths =
+  let tags_intersection ~root ~paths =
     let intersection acc_set set =
       match acc_set with
       | None -> Some set 
@@ -494,7 +500,7 @@ module Run : Run = struct
     |> List.fold_left intersection None
     |> CCOption.get_or ~default:Set.empty
 
-  let tags_union ~debug ~root ~paths =
+  let tags_union ~root ~paths =
     let union acc_set set =
       match acc_set with
       | None -> Some set 
@@ -505,4 +511,25 @@ module Run : Run = struct
     |> List.fold_left union None
     |> CCOption.get_or ~default:Set.empty
 
+  (*goto
+    * iterate recursively through all symlinks in root
+      * for each symlink:
+        * check if target matches path0:
+          * make target absolute + normalize
+          * check if path0 is prefix of target (or equal to)
+            * if yes, overwrite symlink with new target:
+              * remove whole path0 prefix of absolute-target
+              * prefix path1
+              * make target relative (reuse tag_path_once)
+                * remember to Path.relativize_to_root first
+  *)
+  let replace_paths ~dryrun ~root path0 path1 =
+    let cwd = OS.Dir.current () |> R.failwith_error_msg in
+    (*> Note: '//' potentially overrides cwd prefix*)
+    let path0 = Fpath.(cwd // path0 |> normalize) in
+    let path1 = Fpath.(cwd // path1 |> normalize) in
+    assert (Fpath.is_rooted ~root path0);
+    assert (Fpath.is_rooted ~root path1);
+    failwith "todo"
+  
 end

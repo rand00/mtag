@@ -10,15 +10,15 @@ let log_error fmt =
   in
   kpp (Format.printf "mtag: error: %s\n") fmt
 
-let debug = false
-(* let debug = true *)
+let dryrun = false
+(* let dryrun = true *)
 
 let run_tags_union ~root paths =
   let paths = paths |> List.map (fun p ->
     Fpath.of_string p |> R.failwith_error_msg
   )
   in
-  Mtag.Run.tags_union ~debug ~root ~paths
+  Mtag.Run.tags_union ~root ~paths
   |> Mtag.tags_to_string
   |> print_endline
 
@@ -27,7 +27,7 @@ let run_tags_intersection ~root paths =
     Fpath.of_string p |> R.failwith_error_msg
   )
   in
-  Mtag.Run.tags_intersection ~debug ~root ~paths
+  Mtag.Run.tags_intersection ~root ~paths
   |> Mtag.tags_to_string
   |> print_endline
 
@@ -286,9 +286,13 @@ let main () =
         root, argv'
   in
   match argv with
+  | "replace-paths" :: path0 :: path1 :: [] ->
+    let path0 = Fpath.of_string path0 |> R.failwith_error_msg in
+    let path1 = Fpath.of_string path1 |> R.failwith_error_msg in
+    Mtag.Run.replace_paths ~dryrun ~root path0 path1
   | "query" :: query_str :: [] ->
     let query = query_str |> Mtag.parse_query_string in
-    Mtag.Run.query ~debug ~root ~query
+    Mtag.Run.query ~dryrun ~root ~query
     |> Mtag.Member.PathSet.to_list
     |> CCList.sort compare_mtime_exn
     (* |> CCList.rev *)
@@ -301,11 +305,11 @@ let main () =
     let oldtags = oldtags |> Mtag.parse_string |> List.map Mtag.open_tag in
     let newtags = newtags |> Mtag.parse_string in
     let paths = 
-      Mtag.Run.query ~debug ~root ~query:oldtags
+      Mtag.Run.query ~dryrun ~root ~query:oldtags
       |> Mtag.Member.PathSet.to_list
     in
-    Mtag.Run.tag ~debug ~root ~tags:newtags ~paths;
-    Mtag.Run.rm ~debug ~root ~tags:oldtags ~paths
+    Mtag.Run.tag ~dryrun ~root ~tags:newtags ~paths;
+    Mtag.Run.rm ~dryrun ~root ~tags:oldtags ~paths
   | "rm" :: tags_str :: paths ->
     let tags = tags_str |> Mtag.parse_string in
     let paths = match paths with
@@ -316,7 +320,7 @@ let main () =
       Fpath.of_string p |> R.failwith_error_msg
     )
     in
-    Mtag.Run.rm ~debug ~root ~tags ~paths
+    Mtag.Run.rm ~dryrun ~root ~tags ~paths
   | "tags-intersection" :: paths ->
     let paths = match paths with
       | "-" :: [] -> paths_from_stdin ()
@@ -340,7 +344,7 @@ let main () =
       Fpath.of_string p |> R.failwith_error_msg
     )
     in
-    Mtag.Run.tag ~debug ~root ~tags ~paths
+    Mtag.Run.tag ~dryrun ~root ~tags ~paths
   | [] ->
     print_usage ();
     exit 1
