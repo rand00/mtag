@@ -50,7 +50,15 @@ end
 let tags_dirname = "_mtags"
 
 let to_absolute ~root (`Tag tag_path) =
-  `Tag Fpath.(root / tags_dirname // tag_path)
+  assert (Fpath.is_rel tag_path);
+  (*< Note: needed because of semantics of the '//' operator*)
+  let tag =
+    Fpath.(root / tags_dirname // tag_path)
+    |> Fpath.normalize
+  in
+  assert (Fpath.is_rooted ~root tag);
+  (*< Note: In case user supplied path with '..' inside*)
+  `Tag tag
 
 let from_absolute ~root (`Tag tag_path) =
   let root = Fpath.(root / tags_dirname) in
@@ -74,8 +82,10 @@ let rec parse_not str : expr option =
 
 and parse_tag str : tag =
   let fpath =
-    Fpath.of_string str
+    ("./" ^ str) (*< Note: in case user passes an absolute path*)
+    |> Fpath.of_string
     |> R.failwith_error_msg
+    |> Fpath.normalize
   in
   `Tag fpath
 
