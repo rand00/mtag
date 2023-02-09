@@ -235,6 +235,8 @@ mtag replace-paths <prev-path> <new-path>
     $ mtag replace-paths 20230101 newdir/20230101
 
   .. resulting in all the tags of vid0.mpg being fixed to point at the new path.
+
+  You can use `tree _mtags` to see what symbolic links are broken.
   
 |}
 
