@@ -195,8 +195,9 @@ module Path = struct
       * type t = [ absolute | `Relative of Fpath.t ]
   *)
 
-  let resolve_and_normalize path =
+  let rec resolve_and_normalize path =
     OS.Path.symlink_target path
+    |> CCResult.map resolve_and_normalize
     |> CCResult.get_or ~default:path
     |> Fpath.normalize
 
@@ -369,20 +370,18 @@ module Run : Run = struct
       tag |> tag_path_once ~dryrun ~root ~path |> R.failwith_error_msg
     )
 
-  (*> goto should still veryfy paths*)
   (*exposed*)
   let tag ~dryrun ~root ~cwd ~tags ~paths =
     let normalized_paths =
       paths
-      (* |> List.map Path.resolve_and_normalize *)
-      (*< Note: resolving symlinks (once), so one can tag the target of a tag*)
-      (*< goto this should only be resolved if path is inside tags-root*)
+      |> List.map Path.resolve_and_normalize
       |> List.map (Path.to_absolute ~cwd)
     in
+    (*> goto only print the bad path*)
     if not (normalized_paths |> List.for_all (Path.verify ~debug:dryrun ~root)) then
       failwith (
-        sp "mtag: Normalized paths didn't verify: %s" 
-          (normalized_paths |> List.map Fpath.to_string |> String.concat " "));
+        sp "mtag: Normalized paths didn't verify:\n%s" 
+          (normalized_paths |> List.map Fpath.to_string |> String.concat "\n"));
     normalized_paths
     |> List.map (Path.relativize_to_root ~root)
     |> List.iter (tag_path ~dryrun ~root ~tags)
@@ -445,19 +444,12 @@ module Run : Run = struct
   let rm ~dryrun ~root ~cwd ~tags ~paths =
     let paths =
       paths
-      (* |> List.map Path.resolve_and_normalize *)
-      (*< Note: enables removal of the tags of a file that a tag points to
-          - do I want this feature? seems unneccesary
-            * like for tagging, should only resolve to target, if path is inside
-              tags root
-      *)
+      |> List.map (fun path ->
+        if OS.File.exists path |> R.failwith_error_msg then
+          Path.resolve_and_normalize path
+        else path
+      )
       |> List.map (Path.to_absolute ~cwd)
-      (*< goto problem; both resolve_and_normalize + to_absolute makes it impossible
-          to remove tags from path that doesn't exist anymore as they depend
-          the file on filesystem*)
-      (*< goto; rm_tag_for_path.members also call to_absolute..
-          .. why is it needed, and why can't it just be based on Fpath + cwd?
-      *)
     in
     tags |> List.iter (fun tag ->
       rm_tag_for_paths ~dryrun ~root ~tag ~paths)
