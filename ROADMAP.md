@@ -1,5 +1,6 @@
 # Roadmap in ~ prioritized order
 
+* make a more correct description of query language; [BNF](https://en.wikipedia.org/wiki/Backus%E2%80%93Naur_form)? 
 * test `tag/rm/..` of symlinks (search for `Path.resolve_and_normalize` in `Mtag`)
   * should symlinks be able to be tagged?
   * currently they are followed once, and target is tagged
