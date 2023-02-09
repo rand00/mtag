@@ -83,6 +83,7 @@ SYNOPSIS
   mtag rm <tags> <paths..>
   mtag tags-union <paths..>
   mtag tags-intersection <paths..>
+  mtag replace-paths <prev-path> <new-path>
   
 DESCRIPTION
 
@@ -217,6 +218,24 @@ mtag tags-intersection <paths..>
 
   Works the same as `mtag tags-union` but using mathematical set intersection.
 
+mtag replace-paths <prev-path> <new-path>
+
+  In case you have moved tagged files around within the mtag root directory,
+  you can fix all the broken tags (which are symlinks within the `_mtags`
+  directory) with this command.
+
+  Paths given can be partial (in case of moving a directory), or full (in case
+  of moving a file). Paths are seen as relative to the current working
+  directory. E.g. from within your mtag root directory:
+  
+    $ cd videos
+    $ mtag mytag 20230101/vid0.mpg
+    $ mkdir newdir
+    $ mv 20230101 newdir/
+    $ mtag replace-paths 20230101 newdir/20230101
+
+  .. resulting in all the tags of vid0.mpg being fixed to point at the new path.
+  
 |}
 
 let print_usage () = print_endline usage
