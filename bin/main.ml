@@ -13,21 +13,21 @@ let log_error fmt =
 let dryrun = false
 (* let dryrun = true *)
 
-let run_tags_union ~root paths =
+let run_tags_union ~root ~cwd paths =
   let paths = paths |> List.map (fun p ->
     Fpath.of_string p |> R.failwith_error_msg
   )
   in
-  Mtag.Run.tags_union ~root ~paths
+  Mtag.Run.tags_union ~root ~cwd ~paths
   |> Mtag.tags_to_string
   |> print_endline
 
-let run_tags_intersection ~root paths =
+let run_tags_intersection ~root ~cwd paths =
   let paths = paths |> List.map (fun p ->
     Fpath.of_string p |> R.failwith_error_msg
   )
   in
-  Mtag.Run.tags_intersection ~root ~paths
+  Mtag.Run.tags_intersection ~root ~cwd ~paths
   |> Mtag.tags_to_string
   |> print_endline
 
@@ -250,13 +250,15 @@ let main () =
       exit 0
     | _ -> ()
   end;
+  let cwd = OS.Dir.current () |> R.failwith_error_msg in
   let root, argv = match argv with
     | [] -> find_root (), argv
     | arg :: argv' ->
       match CCString.chop_prefix ~pre:"--root=" arg with
       | None -> find_root (), argv
       | Some root ->
-        let root = Fpath.v root |> Mtag.Path.to_absolute in
+        let root = Fpath.v root |> Mtag.Path.to_absolute ~cwd in
+        assert (OS.Dir.exists root |> R.failwith_error_msg);
         root, argv'
   in
   match argv with
@@ -282,8 +284,8 @@ let main () =
       Mtag.Run.query ~dryrun ~root ~query:oldtags
       |> Mtag.Member.PathSet.to_list
     in
-    Mtag.Run.tag ~dryrun ~root ~tags:newtags ~paths;
-    Mtag.Run.rm ~dryrun ~root ~tags:oldtags ~paths
+    Mtag.Run.tag ~dryrun ~root ~cwd ~tags:newtags ~paths;
+    Mtag.Run.rm ~dryrun ~root ~cwd ~tags:oldtags ~paths
   | "rm" :: tags_str :: paths ->
     let tags = tags_str |> Mtag.parse_string in
     let paths = match paths with
@@ -294,20 +296,20 @@ let main () =
       Fpath.of_string p |> R.failwith_error_msg
     )
     in
-    Mtag.Run.rm ~dryrun ~root ~tags ~paths
+    Mtag.Run.rm ~dryrun ~root ~cwd ~tags ~paths
   | "tags-intersection" :: paths ->
     let paths = match paths with
       | "-" :: [] -> paths_from_stdin ()
       | v -> v
     in
-    run_tags_intersection ~root paths 
+    run_tags_intersection ~root ~cwd paths 
   | "tags-union" :: paths
   | "tags" :: paths -> 
     let paths = match paths with
       | "-" :: [] -> paths_from_stdin ()
       | v -> v
     in
-    run_tags_union ~root paths
+    run_tags_union ~root ~cwd paths
   | tags_str :: paths -> 
     let tags = tags_str |> Mtag.parse_string in
     let paths = match paths with
@@ -315,10 +317,11 @@ let main () =
       | v -> v
     in
     let paths = paths |> List.map (fun p ->
-      Fpath.of_string p |> R.failwith_error_msg
+      let p = Fpath.of_string p |> R.failwith_error_msg in
+      failwith "todo verify"
     )
     in
-    Mtag.Run.tag ~dryrun ~root ~tags ~paths
+    Mtag.Run.tag ~dryrun ~root ~cwd ~tags ~paths
   | [] ->
     print_usage ();
     exit 1

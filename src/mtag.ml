@@ -200,7 +200,9 @@ module Path = struct
     |> CCResult.get_or ~default:path
     |> Fpath.normalize
 
-  let to_absolute path =
+  let to_absolute ~cwd path = Fpath.(cwd // path |> normalize)
+  
+  let to_absolute_via_fs path =
     let path_str = Fpath.to_string path in
     let dir, file =
       if Sys.is_directory path_str then path, None
@@ -258,6 +260,7 @@ module type Run = sig
   val tag : 
     dryrun:bool ->
     root:Fpath.t ->
+    cwd:Fpath.t ->
     tags:(t list) ->
     paths:(Fpath.t list) ->
     unit
@@ -271,17 +274,20 @@ module type Run = sig
   val rm :
     dryrun:bool ->
     root:Fpath.t ->
+    cwd:Fpath.t ->
     tags:(t list) ->
     paths:(Fpath.t list) ->
     unit
 
   val tags_intersection :
     root:Fpath.t ->
+    cwd:Fpath.t ->
     paths:(Fpath.t list) ->
     Set.t 
 
   val tags_union :
     root:Fpath.t ->
+    cwd:Fpath.t ->
     paths:(Fpath.t list) ->
     Set.t
 
@@ -363,14 +369,15 @@ module Run : Run = struct
       tag |> tag_path_once ~dryrun ~root ~path |> R.failwith_error_msg
     )
 
+  (*> goto should still veryfy paths*)
   (*exposed*)
-  let tag ~dryrun ~root ~tags ~paths =
+  let tag ~dryrun ~root ~cwd ~tags ~paths =
     let normalized_paths =
       paths
-      |> List.map Path.resolve_and_normalize
+      (* |> List.map Path.resolve_and_normalize *)
       (*< Note: resolving symlinks (once), so one can tag the target of a tag*)
       (*< goto this should only be resolved if path is inside tags-root*)
-      |> List.map Path.to_absolute
+      |> List.map (Path.to_absolute ~cwd)
     in
     if not (normalized_paths |> List.for_all (Path.verify ~debug:dryrun ~root)) then
       failwith (
@@ -435,16 +442,16 @@ module Run : Run = struct
   let rm_tag_for_paths ~dryrun ~root ~tag ~paths =
     paths |> List.iter (fun path -> rm_tag_for_path ~dryrun ~root ~tag ~path)
   
-  let rm ~dryrun ~root ~tags ~paths =
+  let rm ~dryrun ~root ~cwd ~tags ~paths =
     let paths =
       paths
-      |> List.map Path.resolve_and_normalize
+      (* |> List.map Path.resolve_and_normalize *)
       (*< Note: enables removal of the tags of a file that a tag points to
           - do I want this feature? seems unneccesary
             * like for tagging, should only resolve to target, if path is inside
               tags root
       *)
-      |> List.map Path.to_absolute
+      |> List.map (Path.to_absolute ~cwd)
       (*< goto problem; both resolve_and_normalize + to_absolute makes it impossible
           to remove tags from path that doesn't exist anymore as they depend
           the file on filesystem*)
@@ -474,11 +481,11 @@ module Run : Run = struct
     in
     aux [] root
 
-  let tags_of_path ~root path =
+  let tags_of_path ~root ~cwd path =
     let tags_root = Fpath.(root / tags_dirname) in
     let hashed_target =
       path
-      |> Path.to_absolute 
+      |> Path.to_absolute ~cwd
       |> Path.relativize_to_root ~root
       |> Path.hash
     in
@@ -494,25 +501,25 @@ module Run : Run = struct
     |> R.failwith_error_msg
     |> Set.of_list
 
-  let tags_intersection ~root ~paths =
+  let tags_intersection ~root ~cwd ~paths =
     let intersection acc_set set =
       match acc_set with
       | None -> Some set 
       | Some acc_set -> Some (Set.inter acc_set set)
     in
     paths
-    |> List.map (tags_of_path ~root)
+    |> List.map (tags_of_path ~root ~cwd)
     |> List.fold_left intersection None
     |> CCOption.get_or ~default:Set.empty
 
-  let tags_union ~root ~paths =
+  let tags_union ~root ~cwd ~paths =
     let union acc_set set =
       match acc_set with
       | None -> Some set 
       | Some acc_set -> Some (Set.union acc_set set)
     in
     paths
-    |> List.map (tags_of_path ~root)
+    |> List.map (tags_of_path ~root ~cwd)
     |> List.fold_left union None
     |> CCOption.get_or ~default:Set.empty
   
