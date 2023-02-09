@@ -10,6 +10,13 @@ let log fmt =
   in
   kpp (Format.printf "mtag: %s\n") fmt
 
+let warn fmt =
+  let kpp k fmt =
+    let k fmt = k (Format.flush_str_formatter ()) in
+    Format.kfprintf k Format.str_formatter fmt
+  in
+  kpp (Format.eprintf "mtag: warning: %s\n") fmt
+
 module T = struct 
 
   type tag = [
@@ -221,15 +228,21 @@ module Path = struct
   (*goto path should be `Absolute *)
   let verify ~debug ~root path =
     begin
-      OS.File.exists path >>= fun p_exists ->
+      OS.File.exists path >>= fun p_file_exists ->
       OS.Dir.exists path >>| fun p_dir_exists ->
-      let p_exists = p_exists || p_dir_exists in
+      let p_exists = p_file_exists || p_dir_exists in
       if debug then log "verify path: path exists = %b" p_exists;
       let p_is_inside_root =
         Fpath.is_rooted ~root path
       in
       if debug then log "verify path: inside root = %b" p_is_inside_root;
-      p_exists && p_is_inside_root
+      let r = p_exists && p_is_inside_root in
+      if not r then begin
+        warn "path '%a' didn't verify: exists=%b, is_inside_mtag_root=%b"
+          Fpath.pp path
+          p_exists p_is_inside_root
+      end;
+      r
     end
     |> R.failwith_error_msg
 
@@ -373,11 +386,8 @@ module Run : Run = struct
       |> List.map Path.resolve_and_normalize
       |> List.map (Path.to_absolute ~cwd)
     in
-    (*> goto only print the bad path*)
     if not (normalized_paths |> List.for_all (Path.verify ~debug:dryrun ~root)) then
-      failwith (
-        sp "mtag: Normalized paths didn't verify: %s" 
-          (normalized_paths |> List.map Fpath.to_string |> String.concat " "));
+      failwith (sp "mtag: Normalized paths didn't verify");
     normalized_paths
     |> List.map (Path.relativize_to_root ~root)
     |> List.iter (tag_path ~dryrun ~root ~tags)
