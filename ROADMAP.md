@@ -1,10 +1,12 @@
-# Roadmap
+# Roadmap in ~ prioritized order
 
-* test tag/rm/.. of symlinks (search for Path.resolve_and_normalize in Mtag)
+* test `tag/rm/..` of symlinks (search for `Path.resolve_and_normalize` in `Mtag`)
   * should symlinks be able to be tagged?
+  * currently they are followed once, and target is tagged
   * if should be resolved, shouldn't it be recursive resolving?
+  * @do; don't resolve symlinks - show how to use `readlink -f` with `mtag` instead
 * avoid depending on filesystem for paths given? (if can avoid resolve symlink)
-  * 'to_absolute' could maybe just be an Fpath operation
+  * `to_absolute'`could maybe just be an Fpath operation
   * (? if do) make `mtag rm` be able to remove tags from nonexistant paths
   * use `tree _mtags` to find broken symlinks
     * and show how to fix them
