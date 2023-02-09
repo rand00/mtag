@@ -9,15 +9,16 @@
 * avoid depending on filesystem for paths given? (if can avoid resolve symlink)
   * `to_absolute'`could maybe just be an Fpath operation
   * (? if do) make `mtag rm` be able to remove tags from nonexistant paths
+* docs; write more interesting examples
   * use `tree _mtags` to find broken symlinks
     * and show how to fix them
-  * show how to use tail + head to 'paginate' through list of files
-  * show how to use xargs to iteratively call program with files
-  * show intresting real-life queries; e.g. using '>/,!>score'
-* docs; write more interesting examples
-  * use `>/,!foo` to allow standalone 'not'-expressions (explain, for performance)
+  * show how to use `tail` + `head` to 'paginate' through list of files
+  * show how to use `xargs` to iteratively call program with files
+  * show interesting real-life queries; e.g. using `>/,!>score`
+    * explain how this allows 'not'-expressions + why not allowed without
   * use `mtag mytag (readlink -f tag)` inside `_mtags` to tag what symlink links to
     * note: it does so recursively
+  * interesting CLI combinations of mtag
 * `mtag daemon`
   * < daemon-mode that listens to filesystem to map symlinks automatically
     * > becomes a filesystem tagger for dynamic filesystems!
@@ -39,12 +40,9 @@
       * I like `mtag`.. feels more unique, and like hint to original purpose
         related to media
     * e.g. `mtag` => `ftag` 
-* add more interesting/complex examples to docs
-  * interesting CLI combinations of mtag
-  * `xargs` + other programs ++
 * add section to README.md about other related tools like `tmsu`
   * .. didn't know about this before making `mtag` - they are very alike
-* mtag query 'score/{<=4}'
+* mtag query `score/(<=4)`
   * where
     * `{}` encapsulates expressions on strings
     * `<=` means LTE for strings (which works for numbers too)
