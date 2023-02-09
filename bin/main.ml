@@ -243,10 +243,6 @@ mtag replace-paths <prev-path> <new-path>
 let print_usage () = print_endline usage
 
 (*goto later; extending interface;
-  * mtag replace-paths dir0 dir1
-    * for moving files (/fixing symlinks), including directories -
-      * user supplies CWD-relative paths which are mapped relative to mtag-root
-    * @note on impl; make lib-API nice to use for `mtag daemon`
   * move this todo/roadmap to separate markdown file + link it @ README?
   * test tag/rm/.. of symlinks (search for Path.resolve_and_normalize in Mtag)
     * should symlinks be able to be tagged?
