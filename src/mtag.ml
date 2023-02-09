@@ -112,23 +112,16 @@ let parse_string tag_str : tag list =
   String.split_on_char ',' tag_str
   |> List.map parse_tag
 
-(*goto put in common?*)
-let normalize_symlink_target symlink_path =
+let resolve_tag_symlink symlink_path =
   match symlink_path |> OS.Path.symlink_target with
   | Error err -> None 
   | Ok target ->
-    let normalized_target =
-      let full_path =
-        if Fpath.is_abs target then target else 
-          Fpath.(parent symlink_path // target)
-      in
-      Fpath.normalize full_path
-    in
-    Some normalized_target
+    let target = Fpath.(parent symlink_path // target |> normalize) in
+    Some target
 
 let members ~root ~recurse tag =
   let try_resolve_symlink symlink_path =
-    match normalize_symlink_target symlink_path with
+    match resolve_tag_symlink symlink_path with
     | None -> []
     | Some normalized_target ->
       [{ Member.path = normalized_target; symlink_path }]
@@ -141,7 +134,7 @@ let members ~root ~recurse tag =
       if
         recurse
         && OS.Path.symlink_target content |> Result.is_error 
-        && Sys.is_directory (Fpath.to_string content)
+        && OS.Dir.exists content |> R.failwith_error_msg
       then
         aux content
       else
