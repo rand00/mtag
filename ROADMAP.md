@@ -1,14 +1,13 @@
 # Roadmap in ~ prioritized order
 
+* `mtag export <query> <dir>`
+  * exports all resulting files with original filenames + unique-postfix to `<dir>`
+    as symlinks
+    * creates the dir if doesn't exist
+    * asks to override dir if does exist with files inside
+* `mtag query --long` ..
+  * output a human-readable + script-parseable view of files and all their tags
 * make a more correct description of query language; [BNF](https://en.wikipedia.org/wiki/Backus%E2%80%93Naur_form)? 
-* test `tag/rm/..` of symlinks (search for `Path.resolve_and_normalize` in `Mtag`)
-  * should symlinks be able to be tagged?
-  * currently they are followed once, and target is tagged
-  * if should be resolved, shouldn't it be recursive resolving?
-  * @do; don't resolve symlinks - show how to use `readlink -f` with `mtag` instead
-* avoid depending on filesystem for paths given? (if can avoid resolve symlink)
-  * `to_absolute'`could maybe just be an Fpath operation
-  * (? if do) make `mtag rm` be able to remove tags from nonexistant paths
 * docs; write more interesting examples
   * use `tree _mtags` to find broken symlinks
     * and show how to fix them
@@ -46,13 +45,6 @@
   * where
     * `{}` encapsulates expressions on strings
     * `<=` means LTE for strings (which works for numbers too)
-* `mtag query --long` ..
-  * output a human-readable + script-parseable view of files and all their tags
 * `mtag list-unique`
   * < see `code:projects:art:niseq:subtodos:20200713 how to use n tag tagging`
     * .. some sort of analysis for uniqueness of queried files
-* `mtag export <query> <dir>`
-  * exports all resulting files with original filenames + unique-postfix to `<dir>`
-    as symlinks
-    * creates the dir if doesn't exist
-    * asks to override dir if does exist with files inside
