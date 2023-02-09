@@ -317,8 +317,7 @@ let main () =
       | v -> v
     in
     let paths = paths |> List.map (fun p ->
-      let p = Fpath.of_string p |> R.failwith_error_msg in
-      failwith "todo verify"
+      Fpath.of_string p |> R.failwith_error_msg
     )
     in
     Mtag.Run.tag ~dryrun ~root ~cwd ~tags ~paths
