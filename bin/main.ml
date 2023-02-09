@@ -96,7 +96,8 @@ DESCRIPTION
 
   `mtag` tags any file within an immutable part of the filesystem hierarchy,
   whose base directory contains an `_mtags` directory. Immutable filesystem in 
-  this sense, means that files are added and modified, but not moved or deleted.
+  this sense, means that files are added and modified, but not moved or deleted
+  (see `mtag replace-paths` to fix the tags after moving files).
 
   -- USAGE / SEMANTICS
   
