@@ -21,7 +21,7 @@
   * interesting CLI combinations of mtag
 * `mtag daemon`
   * < daemon-mode that listens to filesystem to map symlinks automatically
-    * > becomes a filesystem tagger for dynamic filesystems!
+    * \> becomes a filesystem tagger for dynamic filesystems!
     * @nice; should be easy to implement
   * using: `inotifywait` (can listen to 'move' + 'delete')
   * perf-note: a single 'mv' can become very expensive
