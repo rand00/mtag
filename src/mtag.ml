@@ -77,9 +77,7 @@ let relative_fpath_of_string str =
 
 let open_tag v = (v : tag :> [>tag])
 
-(*goto cleanup this parser
-  *> should all sub-parsers be in result monad instead?
-*)
+(*goto should all sub-parsers be in result monad instead, to get error msgs? *)
 let rec parse_not str : expr option =
   CCString.chop_prefix ~pre:"!" str
   |> CCOption.map (fun str ->
@@ -350,8 +348,8 @@ module Run : Run = struct
     in
     begin
       if dryrun then begin
-        Printf.printf "DRYRUN: tag_path_once: create dir: %s\n" (Fpath.to_string tag_path);
-        Printf.printf "DRYRUN: tag_path_once: create symlink: %s -> %s\n"
+        log "DRYRUN: tag_path_once: create dir: %s\n" (Fpath.to_string tag_path);
+        log "DRYRUN: tag_path_once: create symlink: %s -> %s\n"
           (Fpath.to_string tag_path_file)
           (Fpath.to_string path);
         Ok ()
@@ -359,10 +357,11 @@ module Run : Run = struct
         OS.Dir.create ~path:true tag_path >>= fun _ ->
         tag_path_file |> OS.Path.symlink ~force:true ~target:path 
     end
-    |> R.failwith_error_msg
   
   let tag_path ~dryrun ~root ~tags path =
-    tags |> List.iter (tag_path_once ~dryrun ~root ~path)
+    tags |> List.iter (fun tag -> 
+      tag |> tag_path_once ~dryrun ~root ~path |> R.failwith_error_msg
+    )
 
   (*exposed*)
   let tag ~dryrun ~root ~tags ~paths =
@@ -516,26 +515,66 @@ module Run : Run = struct
     |> List.map (tags_of_path ~root)
     |> List.fold_left union None
     |> CCOption.get_or ~default:Set.empty
-
-  (*goto
-    * iterate recursively through all symlinks in root
-      * for each symlink:
-        * check if target matches path0:
-          * make target absolute + normalize
-          * check if path0 is prefix of target (or equal to)
-            * if yes, overwrite symlink with new target:
-              * remove whole path0 prefix of absolute-target
-              * prefix path1
-              * make target relative (reuse tag_path_once)
-                * remember to Path.relativize_to_root first
-  *)
+  
+  let replace_paths_aux ~dryrun ~root ~path0 ~path1 =
+    let override_symlink ~path ~target =
+      let mtags_root = Fpath.(root / tags_dirname) in
+      let rel_tag =
+        Path.relativize_to_root ~root:mtags_root path
+        |> Fpath.parent
+      in
+      begin if dryrun then (
+        log "DRYRUN: replace_paths_aux: rel_tag = %a" Fpath.pp rel_tag;
+        log "DRYRUN: replace_paths_aux: deleting %a" Fpath.pp path;
+        Ok ()
+      ) else OS.File.delete path
+      end >>= fun () ->
+      let rel_target = Path.relativize_to_root ~root target in
+      tag_path_once ~dryrun ~root ~path:rel_target @@ `Tag rel_tag
+    in
+    let rec aux path =
+      OS.Dir.exists path >>= function
+      | false ->
+        begin match OS.Path.symlink_target path with
+          | Ok target ->
+            if dryrun then begin
+              log "DRYRUN: replace_paths_aux: found symlink: %a -> %a"
+                Fpath.pp path
+                Fpath.pp target
+            end;
+            let target = Fpath.(root // parent path // target |> normalize) in
+            if dryrun then begin
+              log "DRYRUN: replace_paths_aux: mapped target to %a" Fpath.pp target
+            end;
+            begin match Fpath.rem_prefix path0 target with
+              | None -> (*< Note: if equal it's None too.. *)
+                if not @@ Fpath.equal path0 target then Ok () else
+                  override_symlink ~path ~target:path1
+              | Some rel_target -> 
+                let target = Fpath.(path1 // rel_target) in
+                override_symlink ~path ~target
+            end
+          | Error _ -> Ok () (*< Note: ignoring non-symlinks*)
+        end
+      | true ->
+        path |> OS.Dir.contents ~dotfiles:true ~rel:false
+        >>= fun paths -> 
+        paths |> CCResult.fold_l (fun _ e -> aux e) ()
+    in
+    aux root
+  
   let replace_paths ~dryrun ~root path0 path1 =
     let cwd = OS.Dir.current () |> R.failwith_error_msg in
     (*> Note: '//' potentially overrides cwd prefix*)
     let path0 = Fpath.(cwd // path0 |> normalize) in
     let path1 = Fpath.(cwd // path1 |> normalize) in
+    if dryrun then begin
+      log "DRYRUN: replace_paths: path0 = %a" Fpath.pp path0;
+      log "DRYRUN: replace_paths: path1 = %a" Fpath.pp path0;
+    end;
     assert (Fpath.is_rooted ~root path0);
     assert (Fpath.is_rooted ~root path1);
-    failwith "todo"
+    replace_paths_aux ~dryrun ~root ~path0 ~path1
+    |> R.failwith_error_msg
   
 end
