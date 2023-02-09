@@ -190,7 +190,10 @@ module Path = struct
 
   let rec resolve_and_normalize path =
     OS.Path.symlink_target path
-    |> CCResult.map resolve_and_normalize
+    |> CCResult.map (fun target ->
+      let target = Fpath.(parent path // target) in
+      resolve_and_normalize target
+    )
     |> CCResult.get_or ~default:path
     |> Fpath.normalize
 
@@ -373,8 +376,8 @@ module Run : Run = struct
     (*> goto only print the bad path*)
     if not (normalized_paths |> List.for_all (Path.verify ~debug:dryrun ~root)) then
       failwith (
-        sp "mtag: Normalized paths didn't verify:\n%s" 
-          (normalized_paths |> List.map Fpath.to_string |> String.concat "\n"));
+        sp "mtag: Normalized paths didn't verify: %s" 
+          (normalized_paths |> List.map Fpath.to_string |> String.concat " "));
     normalized_paths
     |> List.map (Path.relativize_to_root ~root)
     |> List.iter (tag_path ~dryrun ~root ~tags)
