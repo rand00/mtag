@@ -17,6 +17,9 @@
   * output a human-readable + script-parseable view of files and all their tags
 * make a more correct description of query language; [BNF](https://en.wikipedia.org/wiki/Backus%E2%80%93Naur_form)? 
 * docs; write more interesting examples
+  * use `find -execdir` to tag files of a certain type 
+  * use `find -execdir` to tag files that is matched by some script
+  * use `shuf` to shuffle the output of `mtag query`
   * use `tree _mtags` to find broken symlinks
     * and show how to fix them
   * show how to use `tail` + `head` to 'paginate' through list of files
