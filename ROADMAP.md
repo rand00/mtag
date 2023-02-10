@@ -1,10 +1,18 @@
 # Roadmap in ~ prioritized order
 
+* decide on if `mtag query` should fail if any found path doesn't exist
+  * I think it shouldn't fail, but print warning to stderr
 * `mtag export <query> <dir>`
   * exports all resulting files with original filenames + unique-postfix to `<dir>`
     as symlinks
     * creates the dir if doesn't exist
     * asks to override dir if does exist with files inside
+* better errors 
+  * print nicer error messages 
+  * define exit-codes with specific semantics 
+    * \> better for scripts using `mtag` that need to error-handle
+  * use colors for printing errors
+    * though not for stdout, for script compatibility
 * `mtag query --long` ..
   * output a human-readable + script-parseable view of files and all their tags
 * make a more correct description of query language; [BNF](https://en.wikipedia.org/wiki/Backus%E2%80%93Naur_form)? 
@@ -48,3 +56,4 @@
 * `mtag list-unique`
   * < see `code:projects:art:niseq:subtodos:20200713 how to use n tag tagging`
     * .. some sort of analysis for uniqueness of queried files
+        
