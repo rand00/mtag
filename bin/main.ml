@@ -271,8 +271,13 @@ let main () =
     let query = query_str |> Mtag.parse_query_string in
     Mtag.Run.query ~dryrun ~root ~query
     |> Mtag.Member.PathSet.to_list
+    (*> gomaybe print a more informative message:
+      * currently it just says that file doesn't exist
+        * should instead specify that file is linked from a broken symlink,
+          * and optimally print symlink path too
+    *)
+    |> CCList.filter (Mtag.Path.verify ~debug:dryrun ~root)
     |> CCList.sort compare_mtime_exn
-    (* |> CCList.rev *)
     |> CCList.to_string ~sep:"\n" Fpath.to_string
     |> print_endline
   | "query" :: _ ->
