@@ -126,9 +126,14 @@ let resolve_tag_symlink symlink_path =
     let target = Fpath.(parent symlink_path // target |> normalize) in
     Some target
 
+let r_exists p = function
+  | Error _ as err -> false
+  | Ok v -> p v
+
 let members ~root ~recurse tag =
   let try_resolve_symlink symlink_path =
     match resolve_tag_symlink symlink_path with
+    (*> Note: None can both be 'not symlink' and 'broken symlink'*)
     | None -> []
     | Some normalized_target ->
       [{ Member.path = normalized_target; symlink_path }]
@@ -138,11 +143,10 @@ let members ~root ~recurse tag =
     |> OS.Dir.contents ~dotfiles:true ~rel:false
     |> R.failwith_error_msg
     |> CCList.flat_map (fun content ->
-      if
-        recurse
-        && OS.Path.symlink_target content |> Result.is_error 
-        && OS.Dir.exists content |> R.failwith_error_msg
-      then
+      let is_not_symlink = lazy (OS.Path.symlink_target content |> R.is_error) in
+      let is_dir = lazy (OS.Dir.exists content |> r_exists ((=) true)) 
+      in
+      if recurse && Lazy.force is_not_symlink && Lazy.force is_dir then
         aux content
       else
         try_resolve_symlink content
