@@ -1,11 +1,5 @@
 # Roadmap in ~ prioritized order
 
-* `mtag export <query> <dir>`
-  * exports all resulting files with original filenames + unique-postfix to `<dir>`
-    as symlinks
-    * creates the dir if doesn't exist
-    * asks to override dir if does exist with files inside
-      * support `--force` for scripts to easily reexport
 * better errors 
   * print nicer error messages 
   * define exit-codes with specific semantics 
