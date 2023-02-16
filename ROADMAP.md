@@ -6,10 +6,14 @@
     * \> better for scripts using `mtag` that need to error-handle
   * use colors for printing errors
     * though not for stdout, for script compatibility
+* check if it's at all useful to be more cleanly in the result-monad in the codebase
+  * .. could be a help for the error messages?
+* `mtag tag <tags> <paths..>` to support any keyword - e.g. `mtag tag rm path0`
 * `mtag query --long` ..
   * output a human-readable + script-parseable view of files and all their tags
 * make a more correct description of query language; [BNF](https://en.wikipedia.org/wiki/Backus%E2%80%93Naur_form)? 
 * docs; write more interesting examples
+  * valdemar scripts to tag files via thunar (:
   * use `find -execdir` to tag files of a certain type 
   * use `find -execdir` to tag files that is matched by some script
   * use `shuf` to shuffle the output of `mtag query`
@@ -45,9 +49,14 @@
     * e.g. `mtag` => `ftag` 
 * add section to README.md about other related tools like `tmsu`
   * .. didn't know about this before making `mtag` - they are very alike
-* mtag query `score/(<=4)`
+* `mtag query` expressions 
+  * e.g. 
+    * `score/(<=4)` 
+    * could also be done on result of `mtag` by other programs:
+      * `(mtime<1d2h)`
+      * `(name=*.jpg)`
   * where
-    * `{}` encapsulates expressions on strings
+    * `()` encapsulates expressions on strings
     * `<=` means LTE for strings (which works for numbers too)
 * `mtag list-unique`
   * < see `code:projects:art:niseq:subtodos:20200713 how to use n tag tagging`
