@@ -238,6 +238,19 @@ mtag replace-paths <prev-path> <new-path>
   .. resulting in all the tags of vid0.mpg being fixed to point at the new path.
 
   You can use `tree _mtags` to see what symbolic links are broken.
+
+mtag export <query> <dir>
+
+  Exports all the files found via query (see `mtag query`) to directory <dir>.
+  Fails if <dir> exists already. All files are tagged using absolute paths,
+  so the resulting directory can be moved around freely, and will work as
+  long as the `mtag` root directory lies in the same place. Filenames are
+  appended with a unique number, to avoid overlapping filenames (when files are
+  named the same across their respective real locations).
+
+  The intended use is to _temporarily_ create a directory with symlinks matching
+  a query (as tags are updated over time). This directory can then be inspected
+  as with any other directory - e.g. using your favorite GUI filemanager.
   
 |}
 
@@ -316,6 +329,13 @@ let main () =
       | v -> v
     in
     run_tags_union ~root ~cwd paths
+  | "export" :: query_str :: dir_name :: [] ->
+    let query = query_str |> Mtag.parse_query_string in
+    let dir = Fpath.of_string dir_name |> R.failwith_error_msg in
+    Mtag.Run.query ~dryrun ~root ~query
+    |> Mtag.Member.PathSet.to_list
+    |> CCList.filter (Mtag.Path.verify ~debug:dryrun ~root)
+    |> Mtag.Run.export ~dryrun ~cwd ~dir
   | tags_str :: paths -> 
     let tags = tags_str |> Mtag.parse_string in
     let paths = match paths with

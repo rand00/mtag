@@ -312,6 +312,13 @@ module type Run = sig
     Fpath.t ->
     unit
   
+  val export :
+    dryrun:bool ->
+    cwd:Fpath.t ->
+    dir:Fpath.t ->
+    Fpath.t list ->
+    unit
+
 end
 
 module Run : Run = struct
@@ -585,5 +592,40 @@ module Run : Run = struct
     assert (Fpath.is_rooted ~root path1);
     replace_paths_aux ~dryrun ~root ~path0 ~path1
     |> R.failwith_error_msg
-  
+
+  let export ~dryrun ~cwd ~dir targets =
+    let module PMap = CCMap.Make(Fpath) in
+    let export_dir = Fpath.(cwd // dir |> normalize) in
+    begin
+      OS.Dir.exists export_dir >>= fun export_dir_exists ->
+      if export_dir_exists then
+        R.error_msg "Export directory already exists"
+      else begin
+        (if dryrun then (
+            log "DRYRUN: export: create directory: %a" Fpath.pp export_dir;
+            Ok true
+          ) else OS.Dir.create export_dir
+        ) >>= fun _ ->
+        targets |> CCResult.fold_l (fun seen_filenames target ->
+          let filename = Fpath.base target in
+          let seen_filenames = seen_filenames |> PMap.update filename (function
+            | None -> Some 0
+            | Some i -> Some (succ i)
+          ) 
+          in
+          let i = PMap.find filename seen_filenames in
+          let filename' = Fmt.str "%a_%d" Fpath.pp filename i in
+          let path = Fpath.(export_dir / filename') in
+          (if dryrun then (
+              log "DRYRUN: symlink %a -> %a" Fpath.pp target Fpath.pp path;
+              Ok ()
+            ) else OS.Path.symlink ~target path
+          ) >>| fun () ->
+          seen_filenames
+        ) PMap.empty
+        >>= fun _ -> Ok ()
+      end
+    end
+    |> R.failwith_error_msg
+
 end

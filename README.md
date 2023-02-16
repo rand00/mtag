@@ -181,6 +181,19 @@ $ mtag replace-paths 20230101 newdir/20230101
 
 You can use `tree _mtags` to see what symbolic links are broken.
 
+### `mtag export <query> <dir>`
+
+Exports all the files found via query (see `mtag query`) to directory `<dir>`.
+Fails if `<dir>` exists already. All files are tagged using absolute paths,
+so the resulting directory can be moved around freely, and will work as
+long as the `mtag` root directory lies in the same place. Filenames are
+appended with a unique number, to avoid overlapping filenames (when files are
+named the same across their respective real locations).
+
+The intended use is to _temporarily_ create a directory with symlinks matching
+a query (as tags are updated over time). This directory can then be inspected
+as with any other directory - e.g. using your favorite GUI filemanager.
+  
 ## Installation
 
 [Install](https://opam.ocaml.org/doc/Install.html) `opam`, the OCaml package manager.
