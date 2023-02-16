@@ -6,6 +6,9 @@
       * can prefix be avoided? 
       * supports colours?
       * what other libs could be relevant to support coloured printing?
+  * make std-err warnings flush before printing to stderr?
+    * OR maybe they _should_ be the last thing printed, for user to see the warnings 
+      after long list on stdout?
   * print nicer error messages 
     * textually
     * use colors for printing errors on stderr
