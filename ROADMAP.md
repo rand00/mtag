@@ -1,11 +1,17 @@
 # Roadmap in ~ prioritized order
 
 * better errors 
+  * make mockups of what I want it to look like 
+    * see if `Logs` lib is useful - 
+      * can prefix be avoided? 
+      * supports colours?
+      * what other libs could be relevant to support coloured printing?
   * print nicer error messages 
+    * textually
+    * use colors for printing errors on stderr
+      * though not on stdout, for script compatibility
   * define exit-codes with specific semantics 
     * \> better for scripts using `mtag` that need to error-handle
-  * use colors for printing errors
-    * though not for stdout, for script compatibility
 * check if it's at all useful to be more cleanly in the result-monad in the codebase
   * .. could be a help for the error messages?
 * `mtag tag <tags> <paths..>` to support any keyword - e.g. `mtag tag rm path0`
