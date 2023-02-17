@@ -22,6 +22,8 @@
   * output a human-readable + script-parseable view of files and all their tags
 * make a more correct description of query language; [BNF](https://en.wikipedia.org/wiki/Backus%E2%80%93Naur_form)? 
 * docs; write more interesting examples
+  * show how to export `_mtags` via small `find`/`mtag` script to any tag manager (here just reimport via `mtag` in other mtag-root)
+    * re-importing to other `mtag`-root is useful in itself!
   * valdemar scripts to tag files via thunar (:
   * use `find -execdir` to tag files of a certain type 
   * use `find -execdir` to tag files that is matched by some script
