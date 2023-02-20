@@ -1,25 +1,23 @@
 # Roadmap in ~ prioritized order
 
-* better errors 
-  * make mockups of what I want it to look like 
-    * see if `Logs` lib is useful - 
-      * can prefix be avoided? 
-      * supports colours?
-      * what other libs could be relevant to support coloured printing?
-  * make std-err warnings flush before printing to stderr?
-    * OR maybe they _should_ be the last thing printed, for user to see the warnings 
-      after long list on stdout?
-  * print nicer error messages 
-    * textually
-    * use colors for printing errors on stderr
-      * though not on stdout, for script compatibility
-  * define exit-codes with specific semantics 
-    * \> better for scripts using `mtag` that need to error-handle
-* check if it's at all useful to be more cleanly in the result-monad in the codebase
-  * .. could be a help for the error messages?
 * `mtag tag <tags> <paths..>` to support any keyword - e.g. `mtag tag rm path0`
+* `mtag daemon`
+  * < daemon-mode that listens to filesystem to map symlinks automatically
+    * \> becomes a filesystem tagger for dynamic filesystems!
+    * @nice; should be easy to implement
+  * using: `inotifywait` (can listen to 'move' + 'delete')
+  * perf-note: a single 'mv' can become very expensive
+    * all tags need to be looked at
+      * all files that match need to get symlinks mapped
+        * e.g. all children of some major dir
+    * @idea; could keep whole _mtags in memory and listen to FS changes to this too
+      * fixes:
+        * symlinks matching moved file are quickly found
+        * all tags are cached in mem, so no major FS access 
 * `mtag query --long` ..
   * output a human-readable + script-parseable view of files and all their tags
+* check if it's at all useful to be more cleanly in the result-monad in the codebase
+  * .. could be a help for the error messages?
 * make a more correct description of query language; 
   [BNF](https://en.wikipedia.org/wiki/Backus%E2%80%93Naur_form)? 
 * docs; write more interesting examples
@@ -43,19 +41,6 @@
   * use `mtag mytag (readlink -f tag)` inside `_mtags` to tag what symlink links to
     * note: it does so recursively
   * interesting CLI combinations of mtag
-* `mtag daemon`
-  * < daemon-mode that listens to filesystem to map symlinks automatically
-    * \> becomes a filesystem tagger for dynamic filesystems!
-    * @nice; should be easy to implement
-  * using: `inotifywait` (can listen to 'move' + 'delete')
-  * perf-note: a single 'mv' can become very expensive
-    * all tags need to be looked at
-      * all files that match need to get symlinks mapped
-        * e.g. all children of some major dir
-    * @idea; could keep whole _mtags in memory and listen to FS changes to this too
-      * fixes:
-        * symlinks matching moved file are quickly found
-        * all tags are cached in mem, so no major FS access 
 * ? rename title (after prev features): "the universal file tagger"
   * don't mention 'media' to open up peoples minds to what can be tagged
   * 'universal' => any kind of file
@@ -78,4 +63,10 @@
 * `mtag list-unique`
   * < see `code:projects:art:niseq:subtodos:20200713 how to use n tag tagging`
     * .. some sort of analysis for uniqueness of queried files
+* better errors 
+  * make std-err warnings flush before printing to stderr?
+    * OR maybe they _should_ be the last thing printed, for user to see the warnings 
+      after long list on stdout?
+  * define exit-codes with specific semantics 
+    * \> better for scripts using `mtag` that need to error-handle
         
