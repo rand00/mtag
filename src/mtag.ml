@@ -1,21 +1,24 @@
 open Rresult
 open Bos
 
-let sp = Printf.sprintf
-
-let log fmt =
+let log typ fmt =
   let kpp k fmt =
     let k fmt = k (Format.flush_str_formatter ()) in
-    Format.kfprintf k Format.str_formatter fmt
+    Fmt.kpf k Format.str_formatter fmt
   in
-  kpp (Format.printf "mtag: %s\n") fmt
-
-let warn fmt =
-  let kpp k fmt =
-    let k fmt = k (Format.flush_str_formatter ()) in
-    Format.kfprintf k Format.str_formatter fmt
+  let style, log_prefix = match typ with
+    | `Error -> `Fg `Red, Fmt.any "mtag: error: "
+    | `Warning -> `Fg `Red, Fmt.any "mtag: warning: "
+    | `Info -> `Fg `Blue, Fmt.any "mtag: "
   in
-  kpp (Format.eprintf "mtag: warning: %s\n") fmt
+  let print_str_w_prefix =
+    Fmt.(
+      styled style log_prefix
+      ++ string
+      ++ any "\n"
+    )
+  in
+  kpp (print_str_w_prefix Fmt.stderr) fmt
 
 module T = struct 
 
@@ -235,16 +238,19 @@ module Path = struct
       OS.File.exists path >>= fun p_file_exists ->
       OS.Dir.exists path >>| fun p_dir_exists ->
       let p_exists = p_file_exists || p_dir_exists in
-      if debug then log "verify path: path exists = %b" p_exists;
+      if debug then log `Info "verify path: path exists = %b" p_exists;
       let p_is_inside_root =
         Fpath.is_rooted ~root path
       in
-      if debug then log "verify path: inside root = %b" p_is_inside_root;
+      if debug then log `Info "verify path: inside root = %b" p_is_inside_root;
       let r = p_exists && p_is_inside_root in
       if not r then begin
-        warn "path '%a' didn't verify: exists=%b, is_inside_mtag_root=%b"
-          Fpath.pp path
-          p_exists p_is_inside_root
+        if not p_exists then 
+          log `Warning "Path didn't verify: Doesn't exist: '%a'"
+            Fpath.pp path
+        else (* not p_is_inside_root*)
+          log `Warning "Path didn't verify: Isn't within the mtag root: '%a'"
+            Fpath.pp path
       end;
       r
     end
@@ -254,10 +260,10 @@ module Path = struct
   let relativize_to_root ~root path =
     match Fpath.relativize ~root path with
     | Some path -> path
-    | None -> failwith (
-      sp "mtag: Couldn't relativize '%s' to niseq-root"
-        (Fpath.to_string path)
-    )
+    | None ->
+      log `Error "Couldn't relativize '%a' to niseq-root"
+        Fpath.pp path;
+      exit 1
 
   let hash path = 
     Digestif.(
@@ -375,10 +381,10 @@ module Run : Run = struct
     in
     begin
       if dryrun then begin
-        log "DRYRUN: tag_path_once: create dir: %s\n" (Fpath.to_string tag_path);
-        log "DRYRUN: tag_path_once: create symlink: %s -> %s\n"
-          (Fpath.to_string tag_path_file)
-          (Fpath.to_string path);
+        log `Info "DRYRUN: tag_path_once: create dir: %s\n" (Fpath.to_string tag_path);
+        log `Info "DRYRUN: tag_path_once: create symlink: %a -> %a\n"
+          Fpath.pp tag_path_file
+          Fpath.pp path;
         Ok ()
       end else 
         OS.Dir.create ~path:true tag_path >>= fun _ ->
@@ -397,8 +403,14 @@ module Run : Run = struct
       |> List.map Path.resolve_and_normalize
       |> List.map (Path.to_absolute ~cwd)
     in
-    if not (normalized_paths |> List.for_all (Path.verify ~debug:dryrun ~root)) then
-      failwith (sp "mtag: Normalized paths didn't verify");
+    if not (
+      normalized_paths
+      |> List.for_all (Path.verify ~debug:dryrun ~root)
+    )
+    then (
+      log `Error "Normalized paths didn't verify";
+      exit 1
+    );
     normalized_paths
     |> List.map (Path.relativize_to_root ~root)
     |> List.iter (tag_path ~dryrun ~root ~tags)
@@ -446,8 +458,8 @@ module Run : Run = struct
     |> List.iter (fun member -> Member.(
       if member.path = path then begin
         if dryrun then
-          log "DRYRUN: rm_tag_for_path: would delete file: %s"
-            (Fpath.to_string member.symlink_path)
+          log `Info "DRYRUN: rm_tag_for_path: would delete file: %a"
+            Fpath.pp member.symlink_path
         else 
           member.symlink_path
           |> OS.File.delete ~must_exist:true
@@ -540,8 +552,8 @@ module Run : Run = struct
         |> Fpath.parent
       in
       begin if dryrun then (
-        log "DRYRUN: replace_paths_aux: rel_tag = %a" Fpath.pp rel_tag;
-        log "DRYRUN: replace_paths_aux: deleting %a" Fpath.pp path;
+        log `Info "DRYRUN: replace_paths_aux: rel_tag = %a" Fpath.pp rel_tag;
+        log `Info "DRYRUN: replace_paths_aux: deleting %a" Fpath.pp path;
         Ok ()
       ) else OS.File.delete path
       end >>= fun () ->
@@ -554,13 +566,14 @@ module Run : Run = struct
         begin match OS.Path.symlink_target path with
           | Ok target ->
             if dryrun then begin
-              log "DRYRUN: replace_paths_aux: found symlink: %a -> %a"
+              log `Info "DRYRUN: replace_paths_aux: found symlink: %a -> %a"
                 Fpath.pp path
                 Fpath.pp target
             end;
             let target = Fpath.(root // parent path // target |> normalize) in
             if dryrun then begin
-              log "DRYRUN: replace_paths_aux: mapped target to %a" Fpath.pp target
+              log `Info "DRYRUN: replace_paths_aux: mapped target to %a"
+                Fpath.pp target
             end;
             begin match Fpath.rem_prefix path0 target with
               | None -> (*< Note: if equal it's None too.. *)
@@ -585,8 +598,8 @@ module Run : Run = struct
     let path0 = Fpath.(cwd // path0 |> normalize) in
     let path1 = Fpath.(cwd // path1 |> normalize) in
     if dryrun then begin
-      log "DRYRUN: replace_paths: path0 = %a" Fpath.pp path0;
-      log "DRYRUN: replace_paths: path1 = %a" Fpath.pp path0;
+      log `Info "DRYRUN: replace_paths: path0 = %a" Fpath.pp path0;
+      log `Info "DRYRUN: replace_paths: path1 = %a" Fpath.pp path0;
     end;
     assert (Fpath.is_rooted ~root path0);
     assert (Fpath.is_rooted ~root path1);
@@ -602,7 +615,7 @@ module Run : Run = struct
         R.error_msg "Export directory already exists"
       else begin
         (if dryrun then (
-            log "DRYRUN: export: create directory: %a" Fpath.pp export_dir;
+            log `Info "DRYRUN: export: create directory: %a" Fpath.pp export_dir;
             Ok true
           ) else OS.Dir.create export_dir
         ) >>= fun _ ->
@@ -617,7 +630,7 @@ module Run : Run = struct
           let filename' = Fmt.str "%a_%d" Fpath.pp filename i in
           let path = Fpath.(export_dir / filename') in
           (if dryrun then (
-              log "DRYRUN: symlink %a -> %a" Fpath.pp target Fpath.pp path;
+              log `Info "DRYRUN: symlink %a -> %a" Fpath.pp target Fpath.pp path;
               Ok ()
             ) else OS.Path.symlink ~target path
           ) >>| fun () ->

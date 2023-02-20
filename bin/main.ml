@@ -1,14 +1,7 @@
 open Rresult
 open Bos
 
-let sp = Printf.sprintf
-
-let log_error fmt =
-  let kpp k fmt =
-    let k fmt = k (Format.flush_str_formatter ()) in
-    Format.kfprintf k Format.str_formatter fmt
-  in
-  kpp (Format.printf "mtag: error: %s\n") fmt
+let log = Mtag.log
 
 let dryrun = false
 (* let dryrun = true *)
@@ -54,8 +47,8 @@ let find_root () =
     | None ->
       let parent = Fpath.parent dir in
       if parent = dir then (
-        log_error "Didn't find any `_mtags` directory upwards from CWD. See \
-                   --help";
+        log `Error "Didn't find any `_mtags` directory upwards from CWD. \
+                    See --help";
         exit 1
       ) else (
         aux parent
@@ -74,6 +67,7 @@ let paths_from_stdin () =
 let print_usage () = print_endline Usage.v
 
 let main () =
+  Fmt.set_style_renderer Fmt.stderr `Ansi_tty;
   let argv = Sys.argv |> Array.to_list |> List.tl in
   begin match argv with
     | "--help" :: [] ->
@@ -111,7 +105,7 @@ let main () =
     |> CCList.to_string ~sep:"\n" Fpath.to_string
     |> print_endline
   | "query" :: _ ->
-    log_error "Too many arguments. See --help";
+    log `Error "Too many arguments. See --help";
     exit 1
   | "mv" :: oldtags :: newtags :: [] ->
     let oldtags = oldtags |> Mtag.parse_string |> List.map Mtag.open_tag in
