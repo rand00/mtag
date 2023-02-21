@@ -6,19 +6,18 @@ let log typ fmt =
     let k fmt = k (Format.flush_str_formatter ()) in
     Fmt.kpf k Format.str_formatter fmt
   in
-  let style, log_prefix = match typ with
-    | `Error -> `Fg `Red, Fmt.any "mtag: error: "
-    | `Warning -> `Fg `Red, Fmt.any "mtag: warning: "
-    | `Info -> `Fg `Blue, Fmt.any "mtag: "
+  let log_prefix = match typ with
+    | `Error -> Fmt.styled (`Fg `Red) @@ Fmt.any "mtag: error: "
+    | `Warning -> Fmt.styled (`Fg `Red) @@ Fmt.any "mtag: warning: "
+    | `Info -> Fmt.styled (`Fg `Blue) @@ Fmt.any "mtag: "
   in
-  let print_str_w_prefix =
-    Fmt.(
-      styled style log_prefix
-      ++ string
-      ++ any "\n"
-    )
-  in
-  kpp (print_str_w_prefix Fmt.stderr) fmt
+  let log_w_prefix = Fmt.(log_prefix ++ string ++ cut) in
+  (* ++ flush *) (*Not flusing; like that warnings are printed lastly*)
+  (*< goto for more safe way of delaying printing,
+      print all warnings to string-buffer, and print this buffer at end of
+      program
+  *)
+  kpp (log_w_prefix Fmt.stderr) fmt
 
 module T = struct 
 
@@ -456,7 +455,7 @@ module Run : Run = struct
     tag
     |> members ~root ~recurse:false
     |> List.iter (fun member -> Member.(
-      if member.path = path then begin
+      if Fpath.equal member.path path then begin
         if dryrun then
           log `Info "DRYRUN: rm_tag_for_path: would delete file: %a"
             Fpath.pp member.symlink_path
