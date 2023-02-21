@@ -1,5 +1,15 @@
 # Roadmap in ~ prioritized order
 
+* finish up better error messages:
+  * replace all `R.failwith_error_msg` with own custom proc, something like:
+    * `r_failwith_error_msg ~tag:"relative_fpath_of_string"`
+* come up with place to put (potentially a lot) of `mtag` examples
+  * if being a lot - this should be @ dir @ git repo
+  * though CLI usage-text should also contain a set of nice examples...
+  * => 
+    * do both, and refer from usage-text that more examples can be found in repo
+    * make a link from example-section @ README.md to `examples` dir @ repo
+      * .. note that this README then becomes more inconsistent with usage-text :/
 * `mtag tag <tags> <paths..>` to support any keyword - e.g. `mtag tag rm path0`
 * `mtag daemon`
   * < daemon-mode that listens to filesystem to map symlinks automatically
