@@ -19,6 +19,18 @@ let log typ fmt =
   *)
   kpp (log_w_prefix Fmt.stderr) fmt
 
+let r_failwith_error_msg tag = function
+  | Ok v -> v
+  | Error (`Msg msg) ->
+    log `Error "%s: %s" tag msg;
+    exit 1
+
+let r_failwith_error_msg' = function
+  | Ok v -> v
+  | Error (`Msg msg) ->
+    log `Error "%s" msg;
+    exit 1
+
 module T = struct 
 
   type tag = [
@@ -81,7 +93,7 @@ let from_absolute ~root (`Tag tag_path) =
 let relative_fpath_of_string str =
   ("./" ^ str) (*< Note: in case user passes an absolute path*)
   |> Fpath.of_string
-  |> R.failwith_error_msg
+  |> r_failwith_error_msg "relative_fpath_of_string"
   |> Fpath.normalize
 
 let open_tag v = (v : tag :> [>tag])
@@ -143,7 +155,7 @@ let members ~root ~recurse tag =
   let rec aux tag_path =
     tag_path
     |> OS.Dir.contents ~dotfiles:true ~rel:false
-    |> R.failwith_error_msg
+    |> r_failwith_error_msg "members"
     |> CCList.flat_map (fun content ->
       let is_not_symlink = lazy (OS.Path.symlink_target content |> R.is_error) in
       let is_dir = lazy (OS.Dir.exists content |> r_exists ((=) true)) 
@@ -229,7 +241,7 @@ module Path = struct
       in
       apath
     end
-    |> R.failwith_error_msg
+    |> r_failwith_error_msg "to_absolute_via_fs"
 
   (*goto path should be `Absolute *)
   let verify ~debug ~root path =
@@ -253,7 +265,7 @@ module Path = struct
       end;
       r
     end
-    |> R.failwith_error_msg
+    |> r_failwith_error_msg "verify"
 
   (*goto path should be `Absolute *)
   let relativize_to_root ~root path =
@@ -339,7 +351,7 @@ module Run : Run = struct
       else 
         OS.Cmd.run_io ~err:OS.Cmd.err_stderr cmd OS.Cmd.in_null
         |> OS.Cmd.to_stdout
-        |> R.failwith_error_msg
+        |> r_failwith_error_msg "run_exn"
 
     let run_string_exn cmd ~dryrun =
       if dryrun then begin
@@ -350,7 +362,7 @@ module Run : Run = struct
       else 
         OS.Cmd.run_io ~err:OS.Cmd.err_stderr cmd OS.Cmd.in_null
         |> OS.Cmd.to_string
-        |> R.failwith_error_msg
+        |> r_failwith_error_msg "run_string_exn"
 
   end
 
@@ -392,7 +404,9 @@ module Run : Run = struct
   
   let tag_path ~dryrun ~root ~tags path =
     tags |> List.iter (fun tag -> 
-      tag |> tag_path_once ~dryrun ~root ~path |> R.failwith_error_msg
+      tag
+      |> tag_path_once ~dryrun ~root ~path
+      |> r_failwith_error_msg "tag_path"
     )
 
   (*exposed*)
@@ -438,7 +452,8 @@ module Run : Run = struct
     in
     match joined_members, joined_non_members with
     | None,         Some _ ->
-      failwith "Tag: Query-expr: Not-expressions can't stand alone"
+      log `Error "Not-expressions can't stand alone";
+      exit 1
     | None,         None   -> None
     | Some _ as v,  None   -> v
     | Some members, Some non_members ->
@@ -462,7 +477,7 @@ module Run : Run = struct
         else 
           member.symlink_path
           |> OS.File.delete ~must_exist:true
-          |> R.failwith_error_msg
+          |> r_failwith_error_msg "rm_tag_for_path"
       end
     ))
     
@@ -473,7 +488,7 @@ module Run : Run = struct
     let paths =
       paths
       |> List.map (fun path ->
-        if OS.File.exists path |> R.failwith_error_msg then
+        if OS.File.exists path |> r_failwith_error_msg "rm" then
           Path.resolve_and_normalize path
         else path
       )
@@ -518,7 +533,7 @@ module Run : Run = struct
       else None
     in
     dirs_containing ~root:tags_root ~f:is_path
-    |> R.failwith_error_msg
+    |> r_failwith_error_msg "tags_of_path"
     |> Set.of_list
 
   let tags_intersection ~root ~cwd ~paths =
@@ -592,7 +607,7 @@ module Run : Run = struct
     aux root
   
   let replace_paths ~dryrun ~root path0 path1 =
-    let cwd = OS.Dir.current () |> R.failwith_error_msg in
+    let cwd = OS.Dir.current () |> r_failwith_error_msg "replace_paths" in
     (*> Note: '//' potentially overrides cwd prefix*)
     let path0 = Fpath.(cwd // path0 |> normalize) in
     let path1 = Fpath.(cwd // path1 |> normalize) in
@@ -603,7 +618,7 @@ module Run : Run = struct
     assert (Fpath.is_rooted ~root path0);
     assert (Fpath.is_rooted ~root path1);
     replace_paths_aux ~dryrun ~root ~path0 ~path1
-    |> R.failwith_error_msg
+    |> r_failwith_error_msg "replace_paths"
 
   let export ~dryrun ~cwd ~dir targets =
     let module PMap = CCMap.Make(Fpath) in
@@ -638,6 +653,6 @@ module Run : Run = struct
         >>= fun _ -> Ok ()
       end
     end
-    |> R.failwith_error_msg
+    |> r_failwith_error_msg "export"
 
 end
