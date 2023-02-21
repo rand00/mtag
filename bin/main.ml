@@ -149,6 +149,17 @@ let main () =
     |> Mtag.Member.PathSet.to_list
     |> CCList.filter (Mtag.Path.verify ~debug:dryrun ~root)
     |> Mtag.Run.export ~dryrun ~cwd ~dir
+  | "tag" :: tags_str :: paths ->
+    let tags = tags_str |> Mtag.parse_string in
+    let paths = match paths with
+      | "-" :: [] -> paths_from_stdin ()
+      | v -> v
+    in
+    let paths = paths |> List.map (fun p ->
+      Fpath.of_string p |> r_failwith_error_msg'
+    )
+    in
+    Mtag.Run.tag ~dryrun ~root ~cwd ~tags ~paths
   | tags_str :: paths -> 
     let tags = tags_str |> Mtag.parse_string in
     let paths = match paths with

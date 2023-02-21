@@ -92,13 +92,16 @@ mtag <tags> <paths..>
   e.g.:
     $ mtag score/5,color/nice/black file0 file1 file3
 
-  If the first and single file is `-`, then `mtag` will read a newline separated
+  If the first and only file is `-`, then `mtag` will read a newline separated
   list of files from stdin instead.
 
   `--root=<root-dir>` can be passed to override the search for the root
   directory containing an `_mtags` dir, starting from the current working
   directory.
 
+  A `tag` subcommand also exists, to allow you to tag with a single tag that is
+  also an `mtag` subcommand (e.g. if you want to use the tag `rm`).
+  
 mtag query <query>
   
   Query for all files that match the query, where <query> is of the format:
