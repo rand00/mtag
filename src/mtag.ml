@@ -182,7 +182,7 @@ let rec minimize_expr : expr -> expr = function
   | `Not v -> `Not (minimize_expr v)
   | `Within _const as v -> v
 
-let member_paths_of_expr ~root expr =
+let member_sets_of_expr ~root expr =
   let aux = function
     | `Tag _ as tag ->
       `Members (member_paths ~root ~recurse:false tag)
@@ -428,42 +428,26 @@ module Run : Run = struct
     |> List.map (Path.relativize_to_root ~root)
     |> List.iter (tag_path ~dryrun ~root ~tags)
 
-  let member_set_intersection acc_set set =
-    match acc_set with
-    | None -> Some set 
-    | Some acc_set -> Some (Member.PathSet.inter acc_set set)
-
-  let member_set_union acc_set set =
-    match acc_set with
-    | None -> Some set 
-    | Some acc_set -> Some (Member.PathSet.union acc_set set)
-
-  (*goto put in result monad*)
-  let join_member_exprs exprs =
-    let members, not_members = exprs |> CCList.partition_filter_map (function
-      | `Members v -> `Left v
-      | `Not_members v -> `Right v
-    ) in
-    let joined_members =
-      members |> CCList.fold_left member_set_intersection None
-    in
-    let joined_non_members =
-      not_members |> CCList.fold_left member_set_union None
-    in
-    match joined_members, joined_non_members with
-    | None,         Some _ ->
-      log `Error "Not-expressions can't stand alone";
-      exit 1
-    | None,         None   -> None
-    | Some _ as v,  None   -> v
-    | Some members, Some non_members ->
-      Some (Member.PathSet.diff members non_members)
+  (*gomaybe put in result monad*)
+  let join_member_sets acc = function
+    | `Members v ->
+      begin match acc with
+        | None -> Some v
+        | Some acc_set -> Some (Member.PathSet.inter acc_set v)
+      end
+    | `Not_members v ->
+      begin match acc with
+        | None -> 
+          log `Error "Not-expressions can't stand alone";
+          exit 1
+        | Some acc -> Some (Member.PathSet.diff acc v)
+      end
   
   (*exposed*)
   let query ~dryrun ~root ~query =
     query
-    |> List.map (member_paths_of_expr ~root) 
-    |> join_member_exprs
+    |> List.map (member_sets_of_expr ~root) 
+    |> List.fold_left join_member_sets None
     |> CCOption.get_or ~default:Member.PathSet.empty
 
   let rm_tag_for_path ~dryrun ~root ~tag ~path =
