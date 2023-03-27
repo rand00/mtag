@@ -446,7 +446,12 @@ module Run : Run = struct
   (*exposed*)
   let query ~dryrun ~root ~query =
     query
-    |> List.map (member_sets_of_expr ~root) 
+    |> List.map (member_sets_of_expr ~root)
+    |> List.sort (fun x y -> match x, y with
+      | `Members _, `Not_members _ -> -1
+      | `Not_members _, `Members _ -> 1
+      | _ -> 0
+    )
     |> List.fold_left join_member_sets None
     |> CCOption.get_or ~default:Member.PathSet.empty
 
