@@ -429,6 +429,7 @@ module Run : Run = struct
     |> List.iter (tag_path ~dryrun ~root ~tags)
 
   (*gomaybe put in result monad*)
+  (*> Note; expects all `Members to precede `Not_members in List.fold_left*)
   let join_member_sets acc = function
     | `Members v ->
       begin match acc with
