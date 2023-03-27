@@ -450,23 +450,20 @@ module Run : Run = struct
     |> List.fold_left join_member_sets None
     |> CCOption.get_or ~default:Member.PathSet.empty
 
-  let rm_tag_for_path ~dryrun ~root ~tag ~path =
-    tag
-    |> members ~root ~recurse:false
-    |> List.iter (fun member -> Member.(
-      if Fpath.equal member.path path then begin
-        if dryrun then
-          log `Info "DRYRUN: rm_tag_for_path: would delete file: %a"
-            Fpath.pp member.symlink_path
-        else 
-          member.symlink_path
-          |> OS.File.delete ~must_exist:true
-          |> r_failwith_error_msg "rm_tag_for_path"
-      end
-    ))
+  let rm_tag_for_path ~dryrun ~cwd ~root ~tag ~path =
+    let (`Tag tag_path) = tag |> to_absolute ~root in
+    let hashed_target =
+      path
+      |> Path.to_absolute ~cwd
+      |> Path.relativize_to_root ~root
+      |> Path.hash
+    in
+    Fpath.(tag_path / hashed_target)
+    |> OS.File.delete ~must_exist:false
+    |> r_failwith_error_msg "rm_tag_for_path"
     
-  let rm_tag_for_paths ~dryrun ~root ~tag ~paths =
-    paths |> List.iter (fun path -> rm_tag_for_path ~dryrun ~root ~tag ~path)
+  let rm_tag_for_paths ~dryrun ~cwd ~root ~tag ~paths =
+    paths |> List.iter (fun path -> rm_tag_for_path ~dryrun ~cwd ~root ~tag ~path)
   
   let rm ~dryrun ~root ~cwd ~tags ~paths =
     let paths =
@@ -479,7 +476,7 @@ module Run : Run = struct
       |> List.map (Path.to_absolute ~cwd)
     in
     tags |> List.iter (fun tag ->
-      rm_tag_for_paths ~dryrun ~root ~tag ~paths)
+      rm_tag_for_paths ~dryrun ~cwd ~root ~tag ~paths)
 
   let dirs_containing ~f ~root =
     let rec aux acc path =
