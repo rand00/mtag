@@ -109,7 +109,7 @@ and parse_tag str : tag =
   let fpath = relative_fpath_of_string str in
   `Tag fpath
 
-and parse_subdir str =
+and parse_within str =
   CCString.chop_prefix ~pre:">" str
   |> CCOption.map (fun str ->
     `Within (parse_tag str)
@@ -118,7 +118,7 @@ and parse_subdir str =
 and parse_expr str : expr =
   parse_not str
   |> CCOption.get_lazy (fun () ->
-    parse_subdir str
+    parse_within str
     |> CCOption.get_lazy (fun () ->
       let v = parse_tag str in
       (v : tag :> expr)
