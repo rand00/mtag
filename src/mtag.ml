@@ -454,6 +454,7 @@ module Run : Run = struct
     let (`Tag tag_path) = tag |> to_absolute ~root in
     let hashed_target =
       path
+      |> Path.resolve_and_normalize 
       |> Path.to_absolute ~cwd
       |> Path.relativize_to_root ~root
       |> Path.hash
@@ -463,18 +464,10 @@ module Run : Run = struct
     |> r_failwith_error_msg "rm_tag_for_path"
     
   let rm_tag_for_paths ~dryrun ~cwd ~root ~tag ~paths =
-    paths |> List.iter (fun path -> rm_tag_for_path ~dryrun ~cwd ~root ~tag ~path)
+    paths |> List.iter (fun path ->
+      rm_tag_for_path ~dryrun ~cwd ~root ~tag ~path)
   
   let rm ~dryrun ~root ~cwd ~tags ~paths =
-    let paths =
-      paths
-      |> List.map (fun path ->
-        if OS.File.exists path |> r_failwith_error_msg "rm" then
-          Path.resolve_and_normalize path
-        else path
-      )
-      |> List.map (Path.to_absolute ~cwd)
-    in
     tags |> List.iter (fun tag ->
       rm_tag_for_paths ~dryrun ~cwd ~root ~tag ~paths)
 
