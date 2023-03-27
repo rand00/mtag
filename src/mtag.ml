@@ -465,9 +465,14 @@ module Run : Run = struct
       |> Path.relativize_to_root ~root
       |> Path.hash
     in
-    Fpath.(tag_path / hashed_target)
-    |> OS.File.delete ~must_exist:false
-    |> r_failwith_error_msg "rm_tag_for_path"
+    let symlink = Fpath.(tag_path / hashed_target) in
+    if dryrun then 
+      log `Info "DRYRUN: rm_tag_for_path: Would delete %a"
+        Fpath.pp symlink
+    else 
+      Fpath.(tag_path / hashed_target)
+      |> OS.File.delete ~must_exist:false
+      |> r_failwith_error_msg "rm_tag_for_path"
     
   let rm_tag_for_paths ~dryrun ~cwd ~root ~tag ~paths =
     paths |> List.iter (fun path ->
